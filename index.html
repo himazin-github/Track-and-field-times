@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>陸上タイム計測ツール - Manual</title>
+    <title>陸上タイム計測ツール</title>
     <style>
-        body { margin: 0; background: #000; color: white; font-family: sans-serif; padding: 20px; box-sizing: border-box; }
-        h1 { text-align: center; color: #4fc3f7; }
+        body { margin: 0; background: #000; color: white; font-family: sans-serif; padding: 20px; box-sizing: border-box; position: relative; }
+        h1 { text-align: center; color: #4fc3f7; margin-top: 40px; }
         .section { background: #111; padding: 20px; border-radius: 20px; margin-bottom: 24px; border: 1px solid #333; }
         .row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
         label { font-size: 14px; color: #aaa; }
@@ -16,10 +16,6 @@
         #startBtn:disabled { background: #555; opacity: 0.6; }
         #status { font-size: 40px; text-align: center; font-weight: bold; min-height: 60px; color: #4caf50; margin: 10px 0; }
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 9999; }
-
-        /* 説明用 */
-        .guide { font-size: 13px; color: #ccc; line-height: 1.6; }
-        .guide b { color: #4fc3f7; }
 
         /* 解析UI */
         .video-container { width: 100%; background: #000; border-radius: 10px; overflow: hidden; border: 1px solid #444; }
@@ -34,24 +30,50 @@
         
         .record-info { display: flex; justify-content: space-between; margin-top: 15px; background: #222; padding: 10px; border-radius: 10px; font-family: monospace; }
         #result { font-size: 40px; text-align: center; margin-top: 20px; color: #ffeb3b; font-weight: bold; }
+
+        /* 使い方ボタンとモーダル */
+        #helpBtn { position: absolute; top: 10px; right: 10px; background: #4fc3f7; color: #000; padding: 8px 15px; border-radius: 10px; font-size: 14px; z-index: 100; }
+        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; padding: 20px; overflow-y: auto; }
+        .modal-content { background: #222; padding: 20px; border-radius: 20px; line-height: 1.6; font-size: 14px; }
+        .modal-content h2 { color: #4fc3f7; font-size: 18px; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .modal-content b { color: #ff4081; }
+        .close-btn { background: #444; width: 100%; margin-top: 20px; padding: 12px; }
     </style>
 </head>
 <body>
 
 <div id="flash"></div>
+<button id="helpBtn" onclick="toggleModal(true)">使い方</button>
 
-<div class="section">
-    <h1>陸上タイム計測ツール</h1>
-    <div class="guide">
-        <b>【使い方】</b><br>
-        1. 端末の背面または画面を自分（カメラ）に向けて設置する。<br>
-        2. 「START SIGNAL」を押すと「Set」の後に号砲が鳴る。<br>
-        3. <b>[号砲・画面発光・背面ライト]</b> が同時に発生し、スタートの瞬間を記録。<br>
-        4. 撮影した動画を下の「解析ツール」で読み込み、光った瞬間とゴールを記録する。
+<div id="modal">
+    <div class="modal-content">
+        <h2>陸上タイム計測ツール 完全マニュアル</h2>
+        <p>正確な計測のために、以下の手順を1から100まで解説いたします。</p>
+        
+        <p><b>1. 設置方法</b><br>
+        計測用スマホ（この画面）をスタートライン横に設置します。カメラが「画面の発光」または「背面のライト」を捉えられる向きに固定してください。</p>
+
+        <p><b>2. 撮影のコツ</b><br>
+        別のカメラを<b>ゴールラインの真延長線上</b>に三脚で固定してください。斜めから撮ると遠近法の関係で正確なタイムが計れません。必ず真横から撮影してください。</p>
+
+        <p><b>3. iPhoneでのライト設定</b><br>
+        iOSの仕様により、背面のライトが自動で光らない場合があります。その際は必ず<b>「画面フラッシュ」を有効</b>にし、画面を撮影カメラに向けて設置してください。</p>
+
+        <p><b>4. スタート信号の実行</b><br>
+        「START SIGNAL」を押すと「Set」の音声の後、ランダム（または指定秒数）で号砲が鳴り、同時に画面とライトが光ります。これが計測の0秒地点になります。</p>
+
+        <p><b>5. ビデオ解析の手順</b><br>
+        録画した動画を読み込み、スライダーで<b>「スマホが光った瞬間」</b>を探して「スタート点」を押します。次に選手がゴールラインを通過した瞬間を探し「ゴール点」を押すとタイムが算出されます。</p>
+
+        <p><b>6. 精度向上の裏技</b><br>
+        撮影カメラの設定でフレームレートを<b>60fpsや120fps</b>に上げると、より細かいコマ送り（約0.01秒刻み）が可能になり、精度が格段に向上します。</p>
+
+        <button class="close-btn" onclick="toggleModal(false)">閉じる</button>
     </div>
 </div>
 
 <div class="section">
+    <h1>陸上タイム計測ツール</h1>
     <div id="status">READY</div>
     <div class="row">
         <label>画面フラッシュを有効にする？</label>
@@ -61,7 +83,7 @@
         </select>
     </div>
     <div class="row">
-        <label>Setから号砲までの方式</label>
+        <label>方式選択</label>
         <select id="startMode">
             <option value="random">ランダム (1.5s 〜 3.0s)</option>
             <option value="fixed">固定秒数</option>
@@ -72,35 +94,25 @@
         <input type="number" id="fixedDelay" value="2.0" step="0.1">
     </div>
     <div class="row">
-        <label>ライトの点灯タイミング調整 (ms)</label>
+        <label>ライト先行調整 (ms)</label>
         <input type="number" id="torchOffset" value="150">
-        <small style="color:#777;">号砲より何ミリ秒早くライトを光らせるか調整</small>
     </div>
     <button id="startBtn">START SIGNAL</button>
 </div>
 
 <div class="section">
     <h2>解析ツール</h2>
-    <div class="row">
-        <input type="file" id="videoInput" accept="video/*">
-    </div>
+    <input type="file" id="videoInput" accept="video/*" style="margin-bottom:15px; width:100%;">
     <div class="video-container">
         <video id="video" playsinline></video>
     </div>
-    
     <input type="range" id="frameSlider" min="0" value="0">
-    
     <div class="controls-grid">
         <button onclick="togglePlay()" id="playBtn" class="btn-play">再生 / 停止</button>
-        <button onclick="stepFrame(-1)">◀ 1F戻る</button>
-        <button onclick="stepFrame(1)">1F進む ▶</button>
-        <button onclick="markStart()" class="btn-start-mark">🟢 スタート点（光）</button>
-        <button onclick="markGoal()" class="btn-goal-mark">🏁 ゴール点（通過）</button>
-    </div>
-
-    <div class="record-info">
-        <div>START: <span id="startFrameText">-</span></div>
-        <div>GOAL: <span id="goalFrameText">-</span></div>
+        <button onclick="stepFrame(-1)">◀ 戻る</button>
+        <button onclick="stepFrame(1)">進む ▶</button>
+        <button onclick="markStart()" class="btn-start-mark">🟢 スタート点</button>
+        <button onclick="markGoal()" class="btn-goal-mark">🏁 ゴール点</button>
     </div>
     <div id="result">0.000 秒</div>
 </div>
@@ -111,74 +123,47 @@ let videoTrack = null;
 let startFrameTime = null;
 let goalFrameTime = null;
 
-// --- 音響設定（大音量・強化版） ---
-function playGunSound() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const masterGain = audioCtx.createGain();
-    masterGain.gain.setValueAtTime(2.0, audioCtx.currentTime); // 強めにブースト
-    masterGain.connect(audioCtx.destination);
-
-    // 衝撃音（低音）
-    const osc = audioCtx.createOscillator();
-    const oscGain = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-    oscGain.gain.setValueAtTime(1, audioCtx.currentTime);
-    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-    osc.connect(oscGain); oscGain.connect(masterGain);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
-
-    // 破裂音（ホワイトノイズ）
-    const bufferSize = audioCtx.sampleRate * 0.15;
-    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = buffer;
-    const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(1.2, audioCtx.currentTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-    noise.connect(noiseGain); noiseGain.connect(masterGain);
-    noise.start();
+function toggleModal(show) {
+    document.getElementById('modal').style.display = show ? 'block' : 'none';
 }
 
-// --- スタート信号制御 ---
-const startBtn = document.getElementById('startBtn');
-const flashOverlay = document.getElementById('flash');
+function playGunSound() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const g = audioCtx.createGain(); g.gain.value = 2.0; g.connect(audioCtx.destination);
+    const o = audioCtx.createOscillator(); o.type = 'triangle';
+    o.frequency.setValueAtTime(180, audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+    o.connect(g); o.start(); o.stop(audioCtx.currentTime + 0.2);
+    const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+    const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const n = audioCtx.createBufferSource(); n.buffer = b; n.connect(g); n.start();
+}
 
+const startBtn = document.getElementById('startBtn');
 startBtn.onclick = async () => {
     startBtn.disabled = true;
     if (!videoTrack) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             videoTrack = stream.getVideoTracks()[0];
-        } catch(e) { console.warn("Flashlight not available"); }
+        } catch(e) {}
     }
     if (!audioCtx) audioCtx = new AudioContext();
-
     document.getElementById('status').innerText = "SET...";
-    const uttr = new SpeechSynthesisUtterance("Set");
-    uttr.lang = 'en-US';
-    uttr.rate = 0.8;
-    window.speechSynthesis.speak(uttr);
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Set"));
 
-    const mode = document.getElementById('startMode').value;
     const offset = parseInt(document.getElementById('torchOffset').value);
-    const useScreenFlash = document.getElementById('screenFlashToggle').value === 'on';
-    let delay = mode === 'random' ? 1500 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
+    const useFlash = document.getElementById('screenFlashToggle').value === 'on';
+    let delay = document.getElementById('startMode').value === 'random' ? 1500 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
 
     setTimeout(() => {
-        // 先行点灯
         if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: true }] });
-        
         setTimeout(() => {
             playGunSound();
             document.getElementById('status').innerText = "GO!!";
-            if(useScreenFlash) flashOverlay.style.opacity = 1;
-
+            if(useFlash) document.getElementById('flash').style.opacity = 1;
             setTimeout(() => {
-                flashOverlay.style.opacity = 0;
+                document.getElementById('flash').style.opacity = 0;
                 if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: false }] });
                 document.getElementById('status').innerText = "READY";
                 startBtn.disabled = false;
@@ -187,49 +172,18 @@ startBtn.onclick = async () => {
     }, delay - offset);
 };
 
-// --- 解析ビデオ制御 ---
 const video = document.getElementById('video');
 const slider = document.getElementById('frameSlider');
-
-document.getElementById('videoInput').onchange = e => {
-    const file = e.target.files[0];
-    if (file) {
-        video.src = URL.createObjectURL(file);
-        startFrameTime = null; goalFrameTime = null;
-        document.getElementById('startFrameText').innerText = "-";
-        document.getElementById('goalFrameText').innerText = "-";
-        document.getElementById('result').innerText = "0.000 秒";
-    }
-};
-
+document.getElementById('videoInput').onchange = e => { if (e.target.files[0]) video.src = URL.createObjectURL(e.target.files[0]); };
 video.onloadedmetadata = () => { slider.max = video.duration * 1000; };
 video.ontimeupdate = () => { if (!video.paused) slider.value = video.currentTime * 1000; };
 slider.oninput = () => { video.pause(); video.currentTime = slider.value / 1000; };
-
 function togglePlay() { video.paused ? video.play() : video.pause(); }
 function stepFrame(dir) { video.pause(); video.currentTime += dir * (1 / 60); slider.value = video.currentTime * 1000; }
-
-function markStart() {
-    startFrameTime = video.currentTime;
-    document.getElementById('startFrameText').innerText = startFrameTime.toFixed(3) + "s";
-    calculateTime();
-}
-
-function markGoal() {
-    goalFrameTime = video.currentTime;
-    document.getElementById('goalFrameText').innerText = goalFrameTime.toFixed(3) + "s";
-    calculateTime();
-}
-
-function calculateTime() {
-    if (startFrameTime !== null && goalFrameTime !== null) {
-        document.getElementById('result').innerText = Math.abs(goalFrameTime - startFrameTime).toFixed(3) + " 秒";
-    }
-}
-
-document.getElementById('startMode').onchange = (e) => {
-    document.getElementById('fixedRow').style.display = e.target.value === 'fixed' ? 'flex' : 'none';
-};
+function markStart() { startFrameTime = video.currentTime; calculate(); }
+function markGoal() { goalFrameTime = video.currentTime; calculate(); }
+function calculate() { if (startFrameTime !== null && goalFrameTime !== null) document.getElementById('result').innerText = Math.abs(goalFrameTime - startFrameTime).toFixed(3) + " 秒"; }
+document.getElementById('startMode').onchange = (e) => { document.getElementById('fixedRow').style.display = e.target.value === 'fixed' ? 'flex' : 'none'; };
 </script>
 </body>
 </html>
