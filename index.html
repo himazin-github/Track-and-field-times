@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Track Timing System - Pro Audio</title>
+    <title>陸上タイム計測ツール - Manual</title>
     <style>
         body { margin: 0; background: #000; color: white; font-family: sans-serif; padding: 20px; box-sizing: border-box; }
         h1 { text-align: center; color: #4fc3f7; }
@@ -17,6 +17,10 @@
         #status { font-size: 40px; text-align: center; font-weight: bold; min-height: 60px; color: #4caf50; margin: 10px 0; }
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 9999; }
 
+        /* 説明用 */
+        .guide { font-size: 13px; color: #ccc; line-height: 1.6; }
+        .guide b { color: #4fc3f7; }
+
         /* 解析UI */
         .video-container { width: 100%; background: #000; border-radius: 10px; overflow: hidden; border: 1px solid #444; }
         video { width: 100%; display: block; }
@@ -24,7 +28,7 @@
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; background: #4fc3f7; border-radius: 50%; border: 2px solid #fff; }
         
         .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .btn-play { grid-column: span 2; background: #fff; color: #000; font-size: 18px; }
+        .btn-play { grid-column: span 2; background: #fff; color: #000; }
         .btn-start-mark { background: #2e7d32; }
         .btn-goal-mark { background: #1565c0; }
         
@@ -35,10 +39,27 @@
 <body>
 
 <div id="flash"></div>
-<h1>Track Timing System</h1>
+
+<div class="section">
+    <h1>陸上タイム計測ツール</h1>
+    <div class="guide">
+        <b>【使い方】</b><br>
+        1. 端末の背面または画面を自分（カメラ）に向けて設置する。<br>
+        2. 「START SIGNAL」を押すと「Set」の後に号砲が鳴る。<br>
+        3. <b>[号砲・画面発光・背面ライト]</b> が同時に発生し、スタートの瞬間を記録。<br>
+        4. 撮影した動画を下の「解析ツール」で読み込み、光った瞬間とゴールを記録する。
+    </div>
+</div>
 
 <div class="section">
     <div id="status">READY</div>
+    <div class="row">
+        <label>画面フラッシュを有効にする？</label>
+        <select id="screenFlashToggle">
+            <option value="on">有効（画面が白く光る）</option>
+            <option value="off">無効</option>
+        </select>
+    </div>
     <div class="row">
         <label>Setから号砲までの方式</label>
         <select id="startMode">
@@ -51,27 +72,30 @@
         <input type="number" id="fixedDelay" value="2.0" step="0.1">
     </div>
     <div class="row">
-        <label>ライト点灯の先行時間 (ミリ秒)</label>
-        <input type="number" id="torchOffset" value="150" step="10">
+        <label>ライトの点灯タイミング調整 (ms)</label>
+        <input type="number" id="torchOffset" value="150">
+        <small style="color:#777;">号砲より何ミリ秒早くライトを光らせるか調整</small>
     </div>
     <button id="startBtn">START SIGNAL</button>
 </div>
 
 <div class="section">
     <h2>解析ツール</h2>
-    <input type="file" id="videoInput" accept="video/*" style="margin-bottom:10px;">
+    <div class="row">
+        <input type="file" id="videoInput" accept="video/*">
+    </div>
     <div class="video-container">
         <video id="video" playsinline></video>
     </div>
     
-    <input type="range" id="frameSlider" min="0" value="0" step="1">
+    <input type="range" id="frameSlider" min="0" value="0">
     
     <div class="controls-grid">
         <button onclick="togglePlay()" id="playBtn" class="btn-play">再生 / 停止</button>
         <button onclick="stepFrame(-1)">◀ 1F戻る</button>
         <button onclick="stepFrame(1)">1F進む ▶</button>
-        <button onclick="markStart()" class="btn-start-mark">🟢 スタート点</button>
-        <button onclick="markGoal()" class="btn-goal-mark">🏁 ゴール点</button>
+        <button onclick="markStart()" class="btn-start-mark">🟢 スタート点（光）</button>
+        <button onclick="markGoal()" class="btn-goal-mark">🏁 ゴール点（通過）</button>
     </div>
 
     <div class="record-info">
@@ -86,17 +110,15 @@ let audioCtx = null;
 let videoTrack = null;
 let startFrameTime = null;
 let goalFrameTime = null;
-const FPS = 60; // 内部計算用（動画のメタデータから取得可能なら更新）
 
-// --- 号砲音（強化版） ---
+// --- 音響設定（大音量・強化版） ---
 function playGunSound() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
     const masterGain = audioCtx.createGain();
-    masterGain.gain.setValueAtTime(1.5, audioCtx.currentTime); // 音量ブースト
+    masterGain.gain.setValueAtTime(2.0, audioCtx.currentTime); // 強めにブースト
     masterGain.connect(audioCtx.destination);
 
-    // 1. 衝撃音（低音成分）
+    // 衝撃音（低音）
     const osc = audioCtx.createOscillator();
     const oscGain = audioCtx.createGain();
     osc.type = 'triangle';
@@ -104,24 +126,20 @@ function playGunSound() {
     osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
     oscGain.gain.setValueAtTime(1, audioCtx.currentTime);
     oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-    osc.connect(oscGain);
-    oscGain.connect(masterGain);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.2);
+    osc.connect(oscGain); oscGain.connect(masterGain);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
 
-    // 2. 破裂音（ホワイトノイズ成分）
-    const bufferSize = audioCtx.sampleRate * 0.2;
+    // 破裂音（ホワイトノイズ）
+    const bufferSize = audioCtx.sampleRate * 0.15;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    
     const noise = audioCtx.createBufferSource();
     noise.buffer = buffer;
     const noiseGain = audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-    noise.connect(noiseGain);
-    noiseGain.connect(masterGain);
+    noiseGain.gain.setValueAtTime(1.2, audioCtx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    noise.connect(noiseGain); noiseGain.connect(masterGain);
     noise.start();
 }
 
@@ -135,7 +153,7 @@ startBtn.onclick = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             videoTrack = stream.getVideoTracks()[0];
-        } catch(e) { console.warn("Torch unavailable"); }
+        } catch(e) { console.warn("Flashlight not available"); }
     }
     if (!audioCtx) audioCtx = new AudioContext();
 
@@ -147,15 +165,17 @@ startBtn.onclick = async () => {
 
     const mode = document.getElementById('startMode').value;
     const offset = parseInt(document.getElementById('torchOffset').value);
+    const useScreenFlash = document.getElementById('screenFlashToggle').value === 'on';
     let delay = mode === 'random' ? 1500 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
 
     setTimeout(() => {
+        // 先行点灯
         if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: true }] });
         
         setTimeout(() => {
             playGunSound();
             document.getElementById('status').innerText = "GO!!";
-            flashOverlay.style.opacity = 1;
+            if(useScreenFlash) flashOverlay.style.opacity = 1;
 
             setTimeout(() => {
                 flashOverlay.style.opacity = 0;
@@ -173,31 +193,21 @@ const slider = document.getElementById('frameSlider');
 
 document.getElementById('videoInput').onchange = e => {
     const file = e.target.files[0];
-    if (file) video.src = URL.createObjectURL(file);
+    if (file) {
+        video.src = URL.createObjectURL(file);
+        startFrameTime = null; goalFrameTime = null;
+        document.getElementById('startFrameText').innerText = "-";
+        document.getElementById('goalFrameText').innerText = "-";
+        document.getElementById('result').innerText = "0.000 秒";
+    }
 };
 
-video.onloadedmetadata = () => {
-    slider.max = video.duration * 1000; 
-};
+video.onloadedmetadata = () => { slider.max = video.duration * 1000; };
+video.ontimeupdate = () => { if (!video.paused) slider.value = video.currentTime * 1000; };
+slider.oninput = () => { video.pause(); video.currentTime = slider.value / 1000; };
 
-video.ontimeupdate = () => {
-    if (!video.paused) slider.value = video.currentTime * 1000;
-};
-
-slider.oninput = () => {
-    video.pause();
-    video.currentTime = slider.value / 1000;
-};
-
-function togglePlay() {
-    video.paused ? video.play() : video.pause();
-}
-
-function stepFrame(dir) {
-    video.pause();
-    video.currentTime += dir * (1 / 60); // 60fpsと仮定して1F移動
-    slider.value = video.currentTime * 1000;
-}
+function togglePlay() { video.paused ? video.play() : video.pause(); }
+function stepFrame(dir) { video.pause(); video.currentTime += dir * (1 / 60); slider.value = video.currentTime * 1000; }
 
 function markStart() {
     startFrameTime = video.currentTime;
@@ -213,8 +223,7 @@ function markGoal() {
 
 function calculateTime() {
     if (startFrameTime !== null && goalFrameTime !== null) {
-        const diff = Math.abs(goalFrameTime - startFrameTime);
-        document.getElementById('result').innerText = diff.toFixed(3) + " 秒";
+        document.getElementById('result').innerText = Math.abs(goalFrameTime - startFrameTime).toFixed(3) + " 秒";
     }
 }
 
