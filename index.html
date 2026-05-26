@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>陸上タイム計測ツール</title>
+    
+    <title>TF陸上計測くん - 陸上タイム計測・動画解析ツール</title>
+    <meta name="description" content="陸上競技のタイム計測と動画解析。スマホのフラッシュによるスタート特定機能、コマ送り解析機能を搭載。">
+    
     <style>
         body { margin: 0; background: #000; color: white; font-family: sans-serif; padding: 20px; box-sizing: border-box; position: relative; }
-        h1 { text-align: center; color: #4fc3f7; margin-top: 40px; }
+        h1 { text-align: center; color: #4fc3f7; margin-top: 40px; font-size: 26px; }
+        .sub-title { text-align: center; color: #aaa; font-size: 14px; margin-top: -10px; margin-bottom: 20px; }
         .section { background: #111; padding: 20px; border-radius: 20px; margin-bottom: 24px; border: 1px solid #333; }
         .row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
         label { font-size: 14px; color: #aaa; }
@@ -17,7 +21,6 @@
         #status { font-size: 40px; text-align: center; font-weight: bold; min-height: 60px; color: #4caf50; margin: 10px 0; }
         #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 9999; }
 
-        /* 解析UI */
         .video-container { width: 100%; background: #000; border-radius: 10px; overflow: hidden; border: 1px solid #444; }
         video { width: 100%; display: block; }
         input[type="range"] { -webkit-appearance: none; width: 100%; height: 16px; background: #333; border-radius: 8px; margin: 20px 0; }
@@ -30,13 +33,12 @@
         
         #result { font-size: 40px; text-align: center; margin-top: 20px; color: #ffeb3b; font-weight: bold; }
 
-        /* 使い方ボタンとモーダル */
         #helpBtn { position: absolute; top: 10px; right: 10px; background: #4fc3f7; color: #000; padding: 8px 15px; border-radius: 10px; font-size: 14px; z-index: 100; }
         #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; padding: 20px; overflow-y: auto; }
         .modal-content { background: #222; padding: 20px; border-radius: 20px; line-height: 1.6; font-size: 14px; }
         .modal-content h2 { color: #4fc3f7; font-size: 18px; border-bottom: 1px solid #444; padding-bottom: 10px; }
-        .modal-content b { color: #ff4081; }
         .close-btn { background: #444; width: 100%; margin-top: 20px; padding: 12px; }
+        .step-box { background: #333; padding: 10px; border-radius: 10px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -46,47 +48,50 @@
 
 <div id="modal">
     <div class="modal-content">
-        <h2>陸上タイム計測ツール 完全マニュアル</h2>
-        <p>正確な計測のために、<b>2台のスマートフォン</b>を使用します。</p>
+        <h2>TF陸上計測くん 使い方マニュアル</h2>
+        <p>正確な計測のためにスマホを2台使用します。</p>
         
-        <p><b>1. スタート用スマホ（本アプリ）</b><br>
-        スタートラインの横に設置してください。カメラから見て、<b>「画面の発光」または「背面のライト」がはっきりと映る向き</b>に固定するのがポイントです。</p>
+        <div class="step-box">
+            <b>1. スタート地点の設置</b><br>
+            スタートラインの横に本アプリを開いたスマホを設置します。画面のフラッシュ（または背面のライト）がゴール地点から見える向きに固定してください。
+        </div>
 
-        <p><b>2. 撮影用スマホ（動画撮影）</b><br>
-        ゴールラインの真延長線上に人が立ち、撮影を行います。この際、<b>「スタートラインに置いたスマホの光」と「選手のゴール」の両方が1つの画面に収まるように</b>撮影してください。</p>
+        <div class="step-box">
+            <b>2. ゴール地点での撮影</b><br>
+            ゴールラインの真横から動画を撮影します。「スタートスマホの光」と「選手のゴール」が1つの画面に収まるようにしてください。
+        </div>
 
-        <p><b>3. 撮影のコツ</b><br>
-        斜めから撮ると遠近法の関係で正確なタイムが計れません。必ず<b>ゴールラインの真横</b>から狙ってください。iPhone等なら60fps設定で撮ると精度が跳ね上がります。</p>
+        <div class="step-box">
+            <b>3. 解析の手順</b><br>
+            撮影した動画を下の【解析ツール】で読み込み、コマ送り機能を使って「光った瞬間」をスタート点、「ゴールライン通過」をゴール点に設定します。
+        </div>
 
-        <p><b>4. スタートと解析</b><br>
-        「START SIGNAL」で号砲が鳴り、光ります。撮影した動画を解析ツールで開き、「光った瞬間」をスタート、「ゴールライン通過」をゴールとして記録してください。</p>
-
-        <p><b>※iPhone利用時の注意</b><br>
-        iOSの制限でライトが光らないことが多いため、<b>「画面フラッシュ」を有効</b>にして、画面をカメラ側に向けて設置することを強く推奨します。</p>
+        <p>※iPhoneの場合、ライトが光らないことがあるため「画面フラッシュ」を有効にして、画面をゴール側に向けて設置することを推奨します。</p>
 
         <button class="close-btn" onclick="toggleModal(false)">閉じる</button>
     </div>
 </div>
 
 <div class="section">
-    <h1>陸上タイム計測ツール</h1>
+    <h1>TF陸上計測くん</h1>
+    <div class="sub-title">陸上タイム計測・動画解析</div>
     <div id="status">READY</div>
     <div class="row">
-        <label>画面フラッシュを有効にする？</label>
+        <label>画面フラッシュ</label>
         <select id="screenFlashToggle">
-            <option value="on">有効（画面が白く光る）</option>
+            <option value="on">有効</option>
             <option value="off">無効</option>
         </select>
     </div>
     <div class="row">
-        <label>方式選択</label>
+        <label>スタート方式</label>
         <select id="startMode">
-            <option value="random">ランダム (1.5s 〜 3.0s)</option>
-            <option value="fixed">固定秒数</option>
+            <option value="random">ランダム</option>
+            <option value="fixed">固定</option>
         </select>
     </div>
     <div class="row" id="fixedRow" style="display:none;">
-        <label>固定秒数 (秒)</label>
+        <label>秒数</label>
         <input type="number" id="fixedDelay" value="2.0" step="0.1">
     </div>
     <div class="row">
@@ -105,15 +110,16 @@
     <input type="range" id="frameSlider" min="0" value="0">
     <div class="controls-grid">
         <button onclick="togglePlay()" id="playBtn" class="btn-play">再生 / 停止</button>
-        <button onclick="stepFrame(-1)">◀ 戻る</button>
-        <button onclick="stepFrame(1)">進む ▶</button>
-        <button onclick="markStart()" class="btn-start-mark">🟢 スタート点</button>
-        <button onclick="markGoal()" class="btn-goal-mark">🏁 ゴール点</button>
+        <button onclick="stepFrame(-1)">戻る</button>
+        <button onclick="stepFrame(1)">進む</button>
+        <button onclick="markStart()" class="btn-start-mark">スタート点</button>
+        <button onclick="markGoal()" class="btn-goal-mark">ゴール点</button>
     </div>
     <div id="result">0.000 秒</div>
 </div>
 
 <script>
+// ロジック（計測・解析部分）は省略せず維持
 let audioCtx = null;
 let videoTrack = null;
 let startFrameTime = null;
