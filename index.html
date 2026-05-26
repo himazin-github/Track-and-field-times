@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Timing System - Pro Audio</title>
+    <style>
+        body { margin: 0; background: #000; color: white; font-family: sans-serif; padding: 20px; box-sizing: border-box; }
+        h1 { text-align: center; color: #4fc3f7; }
+        .section { background: #111; padding: 20px; border-radius: 20px; margin-bottom: 24px; border: 1px solid #333; }
+        .row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+        label { font-size: 14px; color: #aaa; }
+        button, input, select { padding: 14px; font-size: 16px; border: none; border-radius: 14px; background: #222; color: white; }
+        button { cursor: pointer; background: #444; font-weight: bold; }
+        #startBtn { background: #e91e63; color: white; font-size: 20px; width: 100%; margin-top: 10px; }
+        #startBtn:disabled { background: #555; opacity: 0.6; }
+        #status { font-size: 40px; text-align: center; font-weight: bold; min-height: 60px; color: #4caf50; margin: 10px 0; }
+        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 9999; }
+
+        /* 解析UI */
+        .video-container { width: 100%; background: #000; border-radius: 10px; overflow: hidden; border: 1px solid #444; }
+        video { width: 100%; display: block; }
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 16px; background: #333; border-radius: 8px; margin: 20px 0; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; background: #4fc3f7; border-radius: 50%; border: 2px solid #fff; }
+        
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .btn-play { grid-column: span 2; background: #fff; color: #000; font-size: 18px; }
+        .btn-start-mark { background: #2e7d32; }
+        .btn-goal-mark { background: #1565c0; }
+        
+        .record-info { display: flex; justify-content: space-between; margin-top: 15px; background: #222; padding: 10px; border-radius: 10px; font-family: monospace; }
+        #result { font-size: 40px; text-align: center; margin-top: 20px; color: #ffeb3b; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="flash"></div>
+<h1>Track Timing System</h1>
+
+<div class="section">
+    <div id="status">READY</div>
+    <div class="row">
+        <label>Setから号砲までの方式</label>
+        <select id="startMode">
+            <option value="random">ランダム (1.5s 〜 3.0s)</option>
+            <option value="fixed">固定秒数</option>
+        </select>
+    </div>
+    <div class="row" id="fixedRow" style="display:none;">
+        <label>固定秒数 (秒)</label>
+        <input type="number" id="fixedDelay" value="2.0" step="0.1">
+    </div>
+    <div class="row">
+        <label>ライト点灯の先行時間 (ミリ秒)</label>
+        <input type="number" id="torchOffset" value="150" step="10">
+    </div>
+    <button id="startBtn">START SIGNAL</button>
+</div>
+
+<div class="section">
+    <h2>解析ツール</h2>
+    <input type="file" id="videoInput" accept="video/*" style="margin-bottom:10px;">
+    <div class="video-container">
+        <video id="video" playsinline></video>
+    </div>
+    
+    <input type="range" id="frameSlider" min="0" value="0" step="1">
+    
+    <div class="controls-grid">
+        <button onclick="togglePlay()" id="playBtn" class="btn-play">再生 / 停止</button>
+        <button onclick="stepFrame(-1)">◀ 1F戻る</button>
+        <button onclick="stepFrame(1)">1F進む ▶</button>
+        <button onclick="markStart()" class="btn-start-mark">🟢 スタート点</button>
+        <button onclick="markGoal()" class="btn-goal-mark">🏁 ゴール点</button>
+    </div>
+
+    <div class="record-info">
+        <div>START: <span id="startFrameText">-</span></div>
+        <div>GOAL: <span id="goalFrameText">-</span></div>
+    </div>
+    <div id="result">0.000 秒</div>
+</div>
+
+<script>
+let audioCtx = null;
+let videoTrack = null;
+let startFrameTime = null;
+let goalFrameTime = null;
+const FPS = 60; // 内部計算用（動画のメタデータから取得可能なら更新）
+
+// --- 号砲音（強化版） ---
+function playGunSound() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.setValueAtTime(1.5, audioCtx.currentTime); // 音量ブースト
+    masterGain.connect(audioCtx.destination);
+
+    // 1. 衝撃音（低音成分）
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+    oscGain.gain.setValueAtTime(1, audioCtx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+    osc.connect(oscGain);
+    oscGain.connect(masterGain);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.2);
+
+    // 2. 破裂音（ホワイトノイズ成分）
+    const bufferSize = audioCtx.sampleRate * 0.2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    noise.connect(noiseGain);
+    noiseGain.connect(masterGain);
+    noise.start();
+}
+
+// --- スタート信号制御 ---
+const startBtn = document.getElementById('startBtn');
+const flashOverlay = document.getElementById('flash');
+
+startBtn.onclick = async () => {
+    startBtn.disabled = true;
+    if (!videoTrack) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            videoTrack = stream.getVideoTracks()[0];
+        } catch(e) { console.warn("Torch unavailable"); }
+    }
+    if (!audioCtx) audioCtx = new AudioContext();
+
+    document.getElementById('status').innerText = "SET...";
+    const uttr = new SpeechSynthesisUtterance("Set");
+    uttr.lang = 'en-US';
+    uttr.rate = 0.8;
+    window.speechSynthesis.speak(uttr);
+
+    const mode = document.getElementById('startMode').value;
+    const offset = parseInt(document.getElementById('torchOffset').value);
+    let delay = mode === 'random' ? 1500 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
+
+    setTimeout(() => {
+        if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: true }] });
+        
+        setTimeout(() => {
+            playGunSound();
+            document.getElementById('status').innerText = "GO!!";
+            flashOverlay.style.opacity = 1;
+
+            setTimeout(() => {
+                flashOverlay.style.opacity = 0;
+                if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: false }] });
+                document.getElementById('status').innerText = "READY";
+                startBtn.disabled = false;
+            }, 150);
+        }, offset);
+    }, delay - offset);
+};
+
+// --- 解析ビデオ制御 ---
+const video = document.getElementById('video');
+const slider = document.getElementById('frameSlider');
+
+document.getElementById('videoInput').onchange = e => {
+    const file = e.target.files[0];
+    if (file) video.src = URL.createObjectURL(file);
+};
+
+video.onloadedmetadata = () => {
+    slider.max = video.duration * 1000; 
+};
+
+video.ontimeupdate = () => {
+    if (!video.paused) slider.value = video.currentTime * 1000;
+};
+
+slider.oninput = () => {
+    video.pause();
+    video.currentTime = slider.value / 1000;
+};
+
+function togglePlay() {
+    video.paused ? video.play() : video.pause();
+}
+
+function stepFrame(dir) {
+    video.pause();
+    video.currentTime += dir * (1 / 60); // 60fpsと仮定して1F移動
+    slider.value = video.currentTime * 1000;
+}
+
+function markStart() {
+    startFrameTime = video.currentTime;
+    document.getElementById('startFrameText').innerText = startFrameTime.toFixed(3) + "s";
+    calculateTime();
+}
+
+function markGoal() {
+    goalFrameTime = video.currentTime;
+    document.getElementById('goalFrameText').innerText = goalFrameTime.toFixed(3) + "s";
+    calculateTime();
+}
+
+function calculateTime() {
+    if (startFrameTime !== null && goalFrameTime !== null) {
+        const diff = Math.abs(goalFrameTime - startFrameTime);
+        document.getElementById('result').innerText = diff.toFixed(3) + " 秒";
+    }
+}
+
+document.getElementById('startMode').onchange = (e) => {
+    document.getElementById('fixedRow').style.display = e.target.value === 'fixed' ? 'flex' : 'none';
+};
+</script>
+</body>
+</html>
+
