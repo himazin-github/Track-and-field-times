@@ -119,7 +119,6 @@
 </div>
 
 <script>
-// ロジック（計測・解析部分）は省略せず維持
 let audioCtx = null;
 let videoTrack = null;
 let startFrameTime = null;
@@ -127,16 +126,47 @@ let goalFrameTime = null;
 
 function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
 
+// ネイティブ発音のSet 
+function speakSet() {
+    const utter = new SpeechSynthesisUtterance("Set");
+    const voices = window.speechSynthesis.getVoices();
+    // 英語(en-US)のネイティブボイスを選択（なければデフォルトの英語）
+    const nativeVoice = voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) 
+                     || voices.find(v => v.lang === 'en-US') 
+                     || voices.find(v => v.lang.startsWith('en'));
+    if (nativeVoice) utter.voice = nativeVoice;
+    utter.lang = 'en-US';
+    utter.rate = 0.9;
+    utter.pitch = 0.8;
+    window.speechSynthesis.speak(utter);
+}
+
+// 競技会仕様の電子号砲 
 function playGunSound() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const g = audioCtx.createGain(); g.gain.value = 2.0; g.connect(audioCtx.destination);
-    const o = audioCtx.createOscillator(); o.type = 'triangle';
-    o.frequency.setValueAtTime(180, audioCtx.currentTime);
+    const g = audioCtx.createGain(); g.connect(audioCtx.destination);
+    
+    // 低音成分（ドン！）
+    const o = audioCtx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(150, audioCtx.currentTime);
     o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-    o.connect(g); o.start(); o.stop(audioCtx.currentTime + 0.2);
-    const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+    const og = audioCtx.createGain();
+    og.gain.setValueAtTime(2.0, audioCtx.currentTime);
+    og.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+    o.connect(og); og.connect(g);
+    
+    // ホワイトノイズ成分（パァンという破裂音）
+    const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
     const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    const n = audioCtx.createBufferSource(); n.buffer = b; n.connect(g); n.start();
+    const n = audioCtx.createBufferSource(); n.buffer = b;
+    const ng = audioCtx.createGain();
+    ng.gain.setValueAtTime(0.8, audioCtx.currentTime);
+    ng.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    n.connect(ng); ng.connect(g);
+    
+    o.start(); n.start();
+    o.stop(audioCtx.currentTime + 0.4); n.stop(audioCtx.currentTime + 0.4);
 }
 
 const startBtn = document.getElementById('startBtn');
@@ -150,16 +180,18 @@ startBtn.onclick = async () => {
     }
     if (!audioCtx) audioCtx = new AudioContext();
     document.getElementById('status').innerText = "SET...";
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Set"));
+    
+    // ネイティブ発音で「Set」
+    speakSet();
 
     const offset = parseInt(document.getElementById('torchOffset').value);
     const useFlash = document.getElementById('screenFlashToggle').value === 'on';
-    let delay = document.getElementById('startMode').value === 'random' ? 1500 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
+    let delay = document.getElementById('startMode').value === 'random' ? 2000 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
 
     setTimeout(() => {
         if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: true }] });
         setTimeout(() => {
-            playGunSound();
+            playGunSound(); // 改良版号砲
             document.getElementById('status').innerText = "GO!!";
             if(useFlash) document.getElementById('flash').style.opacity = 1;
             setTimeout(() => {
@@ -184,6 +216,9 @@ function markStart() { startFrameTime = video.currentTime; calculate(); }
 function markGoal() { goalFrameTime = video.currentTime; calculate(); }
 function calculate() { if (startFrameTime !== null && goalFrameTime !== null) document.getElementById('result').innerText = Math.abs(goalFrameTime - startFrameTime).toFixed(3) + " 秒"; }
 document.getElementById('startMode').onchange = (e) => { document.getElementById('fixedRow').style.display = e.target.value === 'fixed' ? 'flex' : 'none'; };
+
+// 音声リスト読み込み（ブラウザ対策）
+window.speechSynthesis.getVoices();
 </script>
 </body>
 </html>
