@@ -124,29 +124,17 @@ let videoTrack = null;
 let startFrameTime = null;
 let goalFrameTime = null;
 
+// 音声ファイルの読み込み
+const setAudio = new Audio('セット.mp3');
+
 function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
 
-// ネイティブ発音のSet 
-function speakSet() {
-    const utter = new SpeechSynthesisUtterance("Set");
-    const voices = window.speechSynthesis.getVoices();
-    // 英語(en-US)のネイティブボイスを選択（なければデフォルトの英語）
-    const nativeVoice = voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) 
-                     || voices.find(v => v.lang === 'en-US') 
-                     || voices.find(v => v.lang.startsWith('en'));
-    if (nativeVoice) utter.voice = nativeVoice;
-    utter.lang = 'en-US';
-    utter.rate = 0.9;
-    utter.pitch = 0.8;
-    window.speechSynthesis.speak(utter);
-}
-
-// 競技会仕様の電子号砲 
+// 競技会仕様の電子号砲
 function playGunSound() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const g = audioCtx.createGain(); g.connect(audioCtx.destination);
     
-    // 低音成分（ドン！）
+    // 低音（ドン！）
     const o = audioCtx.createOscillator();
     o.type = 'triangle';
     o.frequency.setValueAtTime(150, audioCtx.currentTime);
@@ -156,7 +144,7 @@ function playGunSound() {
     og.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
     o.connect(og); og.connect(g);
     
-    // ホワイトノイズ成分（パァンという破裂音）
+    // ホワイトノイズ（パァン！）
     const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
     const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     const n = audioCtx.createBufferSource(); n.buffer = b;
@@ -179,10 +167,12 @@ startBtn.onclick = async () => {
         } catch(e) {}
     }
     if (!audioCtx) audioCtx = new AudioContext();
+
     document.getElementById('status').innerText = "SET...";
     
-    // ネイティブ発音で「Set」
-    speakSet();
+    // 「セット.mp3」を再生
+    setAudio.currentTime = 0;
+    setAudio.play().catch(e => console.log("Audio play error:", e));
 
     const offset = parseInt(document.getElementById('torchOffset').value);
     const useFlash = document.getElementById('screenFlashToggle').value === 'on';
@@ -191,7 +181,7 @@ startBtn.onclick = async () => {
     setTimeout(() => {
         if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: true }] });
         setTimeout(() => {
-            playGunSound(); // 改良版号砲
+            playGunSound();
             document.getElementById('status').innerText = "GO!!";
             if(useFlash) document.getElementById('flash').style.opacity = 1;
             setTimeout(() => {
@@ -216,9 +206,6 @@ function markStart() { startFrameTime = video.currentTime; calculate(); }
 function markGoal() { goalFrameTime = video.currentTime; calculate(); }
 function calculate() { if (startFrameTime !== null && goalFrameTime !== null) document.getElementById('result').innerText = Math.abs(goalFrameTime - startFrameTime).toFixed(3) + " 秒"; }
 document.getElementById('startMode').onchange = (e) => { document.getElementById('fixedRow').style.display = e.target.value === 'fixed' ? 'flex' : 'none'; };
-
-// 音声リスト読み込み（ブラウザ対策）
-window.speechSynthesis.getVoices();
 </script>
 </body>
 </html>
