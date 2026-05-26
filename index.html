@@ -28,7 +28,6 @@
         .btn-start-mark { background: #2e7d32; }
         .btn-goal-mark { background: #1565c0; }
         
-        .record-info { display: flex; justify-content: space-between; margin-top: 15px; background: #222; padding: 10px; border-radius: 10px; font-family: monospace; }
         #result { font-size: 40px; text-align: center; margin-top: 20px; color: #ffeb3b; font-weight: bold; }
 
         /* 使い方ボタンとモーダル */
@@ -48,25 +47,22 @@
 <div id="modal">
     <div class="modal-content">
         <h2>陸上タイム計測ツール 完全マニュアル</h2>
-        <p>正確な計測のために、以下の手順を1から100まで解説いたします。</p>
+        <p>正確な計測のために、<b>2台のスマートフォン</b>を使用します。</p>
         
-        <p><b>1. 設置方法</b><br>
-        計測用スマホ（この画面）をスタートライン横に設置します。カメラが「画面の発光」または「背面のライト」を捉えられる向きに固定してください。</p>
+        <p><b>1. スタート用スマホ（本アプリ）</b><br>
+        スタートラインの横に設置してください。カメラから見て、<b>「画面の発光」または「背面のライト」がはっきりと映る向き</b>に固定するのがポイントです。</p>
 
-        <p><b>2. 撮影のコツ</b><br>
-        別のカメラを<b>ゴールラインの真延長線上</b>に三脚で固定してください。斜めから撮ると遠近法の関係で正確なタイムが計れません。必ず真横から撮影してください。</p>
+        <p><b>2. 撮影用スマホ（動画撮影）</b><br>
+        ゴールラインの真延長線上に人が立ち、撮影を行います。この際、<b>「スタートラインに置いたスマホの光」と「選手のゴール」の両方が1つの画面に収まるように</b>撮影してください。</p>
 
-        <p><b>3. iPhoneでのライト設定</b><br>
-        iOSの仕様により、背面のライトが自動で光らない場合があります。その際は必ず<b>「画面フラッシュ」を有効</b>にし、画面を撮影カメラに向けて設置してください。</p>
+        <p><b>3. 撮影のコツ</b><br>
+        斜めから撮ると遠近法の関係で正確なタイムが計れません。必ず<b>ゴールラインの真横</b>から狙ってください。iPhone等なら60fps設定で撮ると精度が跳ね上がります。</p>
 
-        <p><b>4. スタート信号の実行</b><br>
-        「START SIGNAL」を押すと「Set」の音声の後、ランダム（または指定秒数）で号砲が鳴り、同時に画面とライトが光ります。これが計測の0秒地点になります。</p>
+        <p><b>4. スタートと解析</b><br>
+        「START SIGNAL」で号砲が鳴り、光ります。撮影した動画を解析ツールで開き、「光った瞬間」をスタート、「ゴールライン通過」をゴールとして記録してください。</p>
 
-        <p><b>5. ビデオ解析の手順</b><br>
-        録画した動画を読み込み、スライダーで<b>「スマホが光った瞬間」</b>を探して「スタート点」を押します。次に選手がゴールラインを通過した瞬間を探し「ゴール点」を押すとタイムが算出されます。</p>
-
-        <p><b>6. 精度向上の裏技</b><br>
-        撮影カメラの設定でフレームレートを<b>60fpsや120fps</b>に上げると、より細かいコマ送り（約0.01秒刻み）が可能になり、精度が格段に向上します。</p>
+        <p><b>※iPhone利用時の注意</b><br>
+        iOSの制限でライトが光らないことが多いため、<b>「画面フラッシュ」を有効</b>にして、画面をカメラ側に向けて設置することを強く推奨します。</p>
 
         <button class="close-btn" onclick="toggleModal(false)">閉じる</button>
     </div>
@@ -123,9 +119,7 @@ let videoTrack = null;
 let startFrameTime = null;
 let goalFrameTime = null;
 
-function toggleModal(show) {
-    document.getElementById('modal').style.display = show ? 'block' : 'none';
-}
+function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
 
 function playGunSound() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
