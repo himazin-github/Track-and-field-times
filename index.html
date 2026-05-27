@@ -6,7 +6,7 @@
 
     <title>TF陸上計測くん - 陸上タイム計測・動画解析ツール</title>
 
-    <meta name="description" content="陸上競技のタイム計測と動画解析。スマホのフラッシュによるスタート特定機能、コマ送り解析機能を搭載。">
+    <meta name="description" content="陸上競技のタイム計測と動画解析。スマホのフラッシュによるスタート特定機能、コマ送り解析機能を搭載.">
 
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="favicon.png">
@@ -372,7 +372,7 @@
 let videoTrack = null, startFrameTime = null, records = [];
 // 音声ファイルの読み込み
 const setAudio = new Audio('セット.mp3');
-const gunAudio = new Audio('号砲．MP3'); // リポジトリ内のファイル名に合わせる
+const gunAudio = new Audio('号砲.mp3'); // 半角ドットに修正
 
 document.getElementById('shareBtn').onclick = async () => {
     if (navigator.share) {
@@ -382,7 +382,6 @@ document.getElementById('shareBtn').onclick = async () => {
 
 function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
 
-// 号砲再生関数をmp3再生に書き換え
 function playGunSound() {
     gunAudio.currentTime = 0;
     gunAudio.play().catch(e => console.log("Audio play failed", e));
@@ -448,13 +447,13 @@ function markGoal() {
 }
 
 function clearRecords() {
-    if(!confirm("削除するで？")) return;
+    if(!confirm("削除しますか？")) return;
     records = []; document.querySelector('#recordList tbody').innerHTML = "";
     document.getElementById('result').innerText = "クリアしました。";
 }
 
 function downloadCSV() {
-    if (records.length === 0) return alert("データがないで！");
+    if (records.length === 0) return alert("データがありません");
     let csv = "\uFEFF着順,名前,タイム\n";
     records.forEach(r => { csv += `${r.order},${r.name},${r.time}\n`; });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
