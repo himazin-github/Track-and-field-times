@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -8,11 +9,9 @@
 
     <meta name="description" content="陸上競技のタイム計測と動画解析。スマホのフラッシュによるスタート特定機能、コマ送り解析機能を搭載。">
 
-    <!-- アイコン -->
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="favicon.png">
 
-    <!-- PWA系 -->
     <meta name="theme-color" content="#000000">
 
     <style>
@@ -84,6 +83,21 @@
             font-size: 20px;
             width: 100%;
             margin-top: 10px;
+        }
+
+        /* 共有ボタンを左上に固定 💩 */
+        #shareBtn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #333;
+            color: #4fc3f7;
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            border: 1px solid #4fc3f7;
+            z-index: 100;
+            width: auto;
         }
 
         #startBtn:disabled {
@@ -225,6 +239,10 @@
 <body>
 
 <div id="flash"></div>
+
+<button id="shareBtn">
+    共有
+</button>
 
 <button id="helpBtn" onclick="toggleModal(true)">
     使い方
@@ -399,6 +417,24 @@ let goalFrameTime = null;
 
 const setAudio = new Audio('セット.mp3');
 
+// 共有ボタンの処理
+const shareBtn = document.getElementById('shareBtn');
+shareBtn.onclick = async () => {
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'TF陸上計測くん',
+                text: 'スマホで本格的な陸上タイム計測！動画解析機能付き。',
+                url: window.location.href
+            });
+        } catch (err) {
+            console.log('Share cancelled:', err);
+        }
+    } else {
+        alert("お使いのブラウザは共有機能に対応していません。URLをコピーして共有してください。\n" + window.location.href);
+    }
+};
+
 function toggleModal(show) {
     document.getElementById('modal').style.display =
         show ? 'block' : 'none';
@@ -416,45 +452,20 @@ function playGunSound() {
     const g = audioCtx.createGain();
     g.connect(audioCtx.destination);
 
-    // 低音
     const o = audioCtx.createOscillator();
-
     o.type = 'triangle';
-
-    o.frequency.setValueAtTime(
-        150,
-        audioCtx.currentTime
-    );
-
-    o.frequency.exponentialRampToValueAtTime(
-        40,
-        audioCtx.currentTime + 0.1
-    );
+    o.frequency.setValueAtTime(150, audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
 
     const og = audioCtx.createGain();
-
-    og.gain.setValueAtTime(
-        2.0,
-        audioCtx.currentTime
-    );
-
-    og.gain.exponentialRampToValueAtTime(
-        0.01,
-        audioCtx.currentTime + 0.4
-    );
+    og.gain.setValueAtTime(2.0, audioCtx.currentTime);
+    og.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
 
     o.connect(og);
     og.connect(g);
 
-    // ノイズ
-    const b = audioCtx.createBuffer(
-        1,
-        audioCtx.sampleRate * 0.15,
-        audioCtx.sampleRate
-    );
-
+    const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
     const d = b.getChannelData(0);
-
     for (let i = 0; i < d.length; i++) {
         d[i] = Math.random() * 2 - 1;
     }
@@ -463,23 +474,14 @@ function playGunSound() {
     n.buffer = b;
 
     const ng = audioCtx.createGain();
-
-    ng.gain.setValueAtTime(
-        0.8,
-        audioCtx.currentTime
-    );
-
-    ng.gain.exponentialRampToValueAtTime(
-        0.01,
-        audioCtx.currentTime + 0.15
-    );
+    ng.gain.setValueAtTime(0.8, audioCtx.currentTime);
+    ng.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
 
     n.connect(ng);
     ng.connect(g);
 
     o.start();
     n.start();
-
     o.stop(audioCtx.currentTime + 0.4);
     n.stop(audioCtx.currentTime + 0.4);
 }
@@ -487,23 +489,14 @@ function playGunSound() {
 const startBtn = document.getElementById('startBtn');
 
 startBtn.onclick = async () => {
-
     startBtn.disabled = true;
 
     if (!videoTrack) {
-
         try {
-
-            const stream =
-                await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment'
-                    }
-                });
-
-            videoTrack =
-                stream.getVideoTracks()[0];
-
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+            videoTrack = stream.getVideoTracks()[0];
         } catch(e) {}
     }
 
@@ -511,69 +504,41 @@ startBtn.onclick = async () => {
         audioCtx = new AudioContext();
     }
 
-    document.getElementById('status').innerText =
-        "SET...";
-
+    document.getElementById('status').innerText = "SET...";
     setAudio.currentTime = 0;
-
     setAudio.play().catch(e => {
         console.log("Audio play error:", e);
     });
 
-    const offset = parseInt(
-        document.getElementById('torchOffset').value
-    );
+    const offset = parseInt(document.getElementById('torchOffset').value);
+    const useFlash = document.getElementById('screenFlashToggle').value === 'on';
 
-    const useFlash =
-        document.getElementById('screenFlashToggle').value === 'on';
-
-    let delay =
-        document.getElementById('startMode').value === 'random'
+    let delay = document.getElementById('startMode').value === 'random'
         ? 2000 + Math.random() * 1500
-        : parseFloat(
-            document.getElementById('fixedDelay').value
-          ) * 1000;
+        : parseFloat(document.getElementById('fixedDelay').value) * 1000;
 
     setTimeout(() => {
-
         if(videoTrack) {
-
-            videoTrack.applyConstraints({
-                advanced: [{ torch: true }]
-            });
+            videoTrack.applyConstraints({ advanced: [{ torch: true }] });
         }
 
         setTimeout(() => {
-
             playGunSound();
-
-            document.getElementById('status').innerText =
-                "GO!!";
+            document.getElementById('status').innerText = "GO!!";
 
             if(useFlash) {
                 document.getElementById('flash').style.opacity = 1;
             }
 
             setTimeout(() => {
-
                 document.getElementById('flash').style.opacity = 0;
-
                 if(videoTrack) {
-
-                    videoTrack.applyConstraints({
-                        advanced: [{ torch: false }]
-                    });
+                    videoTrack.applyConstraints({ advanced: [{ torch: false }] });
                 }
-
-                document.getElementById('status').innerText =
-                    "READY";
-
+                document.getElementById('status').innerText = "READY";
                 startBtn.disabled = false;
-
             }, 150);
-
         }, offset);
-
     }, delay - offset);
 };
 
@@ -581,13 +546,8 @@ const video = document.getElementById('video');
 const slider = document.getElementById('frameSlider');
 
 document.getElementById('videoInput').onchange = e => {
-
     if (e.target.files[0]) {
-
-        video.src =
-            URL.createObjectURL(
-                e.target.files[0]
-            );
+        video.src = URL.createObjectURL(e.target.files[0]);
     }
 };
 
@@ -596,34 +556,24 @@ video.onloadedmetadata = () => {
 };
 
 video.ontimeupdate = () => {
-
     if (!video.paused) {
         slider.value = video.currentTime * 1000;
     }
 };
 
 slider.oninput = () => {
-
     video.pause();
-
-    video.currentTime =
-        slider.value / 1000;
+    video.currentTime = slider.value / 1000;
 };
 
 function togglePlay() {
-    video.paused
-        ? video.play()
-        : video.pause();
+    video.paused ? video.play() : video.pause();
 }
 
 function stepFrame(dir) {
-
     video.pause();
-
     video.currentTime += dir * (1 / 60);
-
-    slider.value =
-        video.currentTime * 1000;
+    slider.value = video.currentTime * 1000;
 }
 
 function markStart() {
@@ -637,25 +587,15 @@ function markGoal() {
 }
 
 function calculate() {
-
-    if (
-        startFrameTime !== null &&
-        goalFrameTime !== null
-    ) {
-
+    if (startFrameTime !== null && goalFrameTime !== null) {
         document.getElementById('result').innerText =
-            Math.abs(
-                goalFrameTime - startFrameTime
-            ).toFixed(3) + " 秒";
+            Math.abs(goalFrameTime - startFrameTime).toFixed(3) + " 秒";
     }
 }
 
 document.getElementById('startMode').onchange = (e) => {
-
     document.getElementById('fixedRow').style.display =
-        e.target.value === 'fixed'
-        ? 'flex'
-        : 'none';
+        e.target.value === 'fixed' ? 'flex' : 'none';
 };
 </script>
 
