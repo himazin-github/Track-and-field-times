@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -85,7 +84,6 @@
             margin-top: 10px;
         }
 
-        /* 共有ボタンを左上に固定 💩 */
         #shareBtn {
             position: absolute;
             top: 10px;
@@ -176,11 +174,39 @@
         }
 
         #result {
-            font-size: 40px;
+            font-size: 20px;
             text-align: center;
             margin-top: 20px;
             color: #ffeb3b;
             font-weight: bold;
+        }
+
+        .record-area {
+            margin-top: 20px;
+            border-top: 1px solid #444;
+            padding-top: 20px;
+        }
+
+        #recordList {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        #recordList th, #recordList td {
+            border-bottom: 1px solid #333;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .name-edit {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 5px;
+            border-radius: 5px;
+            width: 90%;
         }
 
         #helpBtn {
@@ -212,27 +238,6 @@
             line-height: 1.6;
             font-size: 14px;
         }
-
-        .modal-content h2 {
-            color: #4fc3f7;
-            font-size: 18px;
-            border-bottom: 1px solid #444;
-            padding-bottom: 10px;
-        }
-
-        .close-btn {
-            background: #444;
-            width: 100%;
-            margin-top: 20px;
-            padding: 12px;
-        }
-
-        .step-box {
-            background: #333;
-            padding: 10px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-        }
     </style>
 </head>
 
@@ -240,364 +245,182 @@
 
 <div id="flash"></div>
 
-<button id="shareBtn">
-    共有
-</button>
-
-<button id="helpBtn" onclick="toggleModal(true)">
-    使い方
-</button>
+<button id="shareBtn">共有</button>
+<button id="helpBtn" onclick="toggleModal(true)">使い方</button>
 
 <div id="modal">
     <div class="modal-content">
-
-        <h2>TF陸上計測くん 使い方マニュアル</h2>
-
-        <p>
-            正確な計測のためにスマホを2台使用します。
-        </p>
-
-        <div class="step-box">
-            <b>1. スタート地点の設置</b><br>
-            スタートラインの横に本アプリを開いたスマホを設置します。
-            画面のフラッシュ（または背面ライト）がゴール地点から見える向きに固定してください。
-        </div>
-
-        <div class="step-box">
-            <b>2. ゴール地点での撮影</b><br>
-            ゴールラインの真横から動画を撮影します。
-            「スタートスマホの光」と「選手のゴール」が1つの画面に収まるようにしてください。
-        </div>
-
-        <div class="step-box">
-            <b>3. 解析の手順</b><br>
-            撮影した動画を下の【解析ツール】で読み込み、
-            コマ送り機能を使って
-            「光った瞬間」をスタート点、
-            「ゴールライン通過」をゴール点に設定します。
-        </div>
-
-        <p>
-            ※iPhoneの場合、ライトが光らないことがあるため、
-            「画面フラッシュ」を有効にして、
-            画面をゴール側に向けることを推奨します。
-        </p>
-
-        <button class="close-btn" onclick="toggleModal(false)">
-            閉じる
-        </button>
-
+        <h2>使い方マニュアル</h2>
+        <p>1. 「計測人数」を設定します。</p>
+        <p>2. 動画を読み込み、光った瞬間で「スタート点」をタップ。</p>
+        <p>3. 選手のゴールに合わせて「ゴール点」を人数分タップします。</p>
+        <p>4. リストの名前欄は直接書き換え可能です。最後にCSVを保存！</p>
+        <button class="close-btn" onclick="toggleModal(false)" style="width:100%; margin-top:20px;">閉じる</button>
     </div>
 </div>
 
 <div class="section">
-
     <h1>TF陸上計測くん</h1>
-
-    <div class="sub-title">
-        陸上タイム計測・動画解析
-    </div>
-
-    <div id="status">
-        READY
-    </div>
-
+    <div id="status">READY</div>
     <div class="row">
         <label>画面フラッシュ</label>
-
         <select id="screenFlashToggle">
             <option value="on">有効</option>
             <option value="off">無効</option>
         </select>
     </div>
-
     <div class="row">
         <label>スタート方式</label>
-
         <select id="startMode">
             <option value="random">ランダム</option>
             <option value="fixed">固定</option>
         </select>
     </div>
-
     <div class="row" id="fixedRow" style="display:none;">
         <label>秒数</label>
-
-        <input
-            type="number"
-            id="fixedDelay"
-            value="2.0"
-            step="0.1"
-        >
+        <input type="number" id="fixedDelay" value="2.0" step="0.1">
     </div>
-
-    <div class="row">
-        <label>ライト先行調整 (ms)</label>
-
-        <input
-            type="number"
-            id="torchOffset"
-            value="150"
-        >
-    </div>
-
-    <button id="startBtn">
-        START SIGNAL
-    </button>
-
+    <button id="startBtn">START SIGNAL</button>
 </div>
 
 <div class="section">
-
     <h2>解析ツール</h2>
-
-    <input
-        type="file"
-        id="videoInput"
-        accept="video/*"
-        style="margin-bottom:15px; width:100%;"
-    >
-
+    <div class="row">
+        <label>計測人数</label>
+        <input type="number" id="playerCount" value="1" min="1" style="margin-bottom:10px;">
+    </div>
+    <input type="file" id="videoInput" accept="video/*" style="margin-bottom:15px; width:100%;">
     <div class="video-container">
         <video id="video" playsinline></video>
     </div>
-
-    <input
-        type="range"
-        id="frameSlider"
-        min="0"
-        value="0"
-    >
-
+    <input type="range" id="frameSlider" min="0" value="0">
     <div class="controls-grid">
-
-        <button
-            onclick="togglePlay()"
-            id="playBtn"
-            class="btn-play"
-        >
-            再生 / 停止
-        </button>
-
-        <button onclick="stepFrame(-1)">
-            戻る
-        </button>
-
-        <button onclick="stepFrame(1)">
-            進む
-        </button>
-
-        <button
-            onclick="markStart()"
-            class="btn-start-mark"
-        >
-            スタート点
-        </button>
-
-        <button
-            onclick="markGoal()"
-            class="btn-goal-mark"
-        >
-            ゴール点
-        </button>
-
+        <button onclick="togglePlay()" class="btn-play">再生 / 停止</button>
+        <button onclick="stepFrame(-1)">戻る</button>
+        <button onclick="stepFrame(1)">進む</button>
+        <button onclick="markStart()" class="btn-start-mark">スタート点</button>
+        <button onclick="markGoal()" class="btn-goal-mark">ゴール点 (追加)</button>
     </div>
+    <div id="result">スタート点を設定してください</div>
 
-    <div id="result">
-        0.000 秒
+    <div class="record-area">
+        <button onclick="downloadCSV()" style="width:100%; background:#fff; color:#000; margin-bottom:10px;">CSVダウンロード</button>
+        <button onclick="clearRecords()" style="width:100%; background:#444; color:#ff5252;">データをクリア</button>
+        <table id="recordList">
+            <thead>
+                <tr>
+                    <th style="width:20%">着順</th>
+                    <th>名前</th>
+                    <th style="width:30%">タイム</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
-
 </div>
 
 <script>
-let audioCtx = null;
-let videoTrack = null;
-let startFrameTime = null;
-let goalFrameTime = null;
-
+let audioCtx = null, videoTrack = null, startFrameTime = null, records = [];
 const setAudio = new Audio('セット.mp3');
 
-// 共有ボタンの処理
-const shareBtn = document.getElementById('shareBtn');
-shareBtn.onclick = async () => {
+document.getElementById('shareBtn').onclick = async () => {
     if (navigator.share) {
-        try {
-            await navigator.share({
-                title: 'TF陸上計測くん',
-                text: 'スマホで本格的な陸上タイム計測！動画解析機能付き。',
-                url: window.location.href
-            });
-        } catch (err) {
-            console.log('Share cancelled:', err);
-        }
-    } else {
-        alert("お使いのブラウザは共有機能に対応していません。URLをコピーして共有してください。\n" + window.location.href);
-    }
+        try { await navigator.share({ title: 'TF陸上計測くん', text: '陸上タイム計測ツール', url: window.location.href }); } catch (err) {}
+    } else { alert("URL: " + window.location.href); }
 };
 
-function toggleModal(show) {
-    document.getElementById('modal').style.display =
-        show ? 'block' : 'none';
-}
+function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
 
 function playGunSound() {
-
-    if (!audioCtx) {
-        audioCtx = new (
-            window.AudioContext ||
-            window.webkitAudioContext
-        )();
-    }
-
-    const g = audioCtx.createGain();
-    g.connect(audioCtx.destination);
-
-    const o = audioCtx.createOscillator();
-    o.type = 'triangle';
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const g = audioCtx.createGain(); g.connect(audioCtx.destination);
+    const o = audioCtx.createOscillator(); o.type = 'triangle';
     o.frequency.setValueAtTime(150, audioCtx.currentTime);
     o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-
-    const og = audioCtx.createGain();
-    og.gain.setValueAtTime(2.0, audioCtx.currentTime);
+    const og = audioCtx.createGain(); og.gain.setValueAtTime(2.0, audioCtx.currentTime);
     og.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-
-    o.connect(og);
-    og.connect(g);
-
-    const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
-    const d = b.getChannelData(0);
-    for (let i = 0; i < d.length; i++) {
-        d[i] = Math.random() * 2 - 1;
-    }
-
-    const n = audioCtx.createBufferSource();
-    n.buffer = b;
-
-    const ng = audioCtx.createGain();
-    ng.gain.setValueAtTime(0.8, audioCtx.currentTime);
-    ng.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-
-    n.connect(ng);
-    ng.connect(g);
-
-    o.start();
-    n.start();
-    o.stop(audioCtx.currentTime + 0.4);
-    n.stop(audioCtx.currentTime + 0.4);
+    o.connect(og); og.connect(g);
+    o.start(); o.stop(audioCtx.currentTime + 0.4);
 }
 
-const startBtn = document.getElementById('startBtn');
-
-startBtn.onclick = async () => {
-    startBtn.disabled = true;
-
+document.getElementById('startBtn').onclick = async () => {
+    const btn = document.getElementById('startBtn'); btn.disabled = true;
     if (!videoTrack) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'environment' }
-            });
-            videoTrack = stream.getVideoTracks()[0];
-        } catch(e) {}
+        try { const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); videoTrack = s.getVideoTracks()[0]; } catch(e) {}
     }
-
-    if (!audioCtx) {
-        audioCtx = new AudioContext();
-    }
-
     document.getElementById('status').innerText = "SET...";
-    setAudio.currentTime = 0;
-    setAudio.play().catch(e => {
-        console.log("Audio play error:", e);
-    });
-
-    const offset = parseInt(document.getElementById('torchOffset').value);
-    const useFlash = document.getElementById('screenFlashToggle').value === 'on';
-
-    let delay = document.getElementById('startMode').value === 'random'
-        ? 2000 + Math.random() * 1500
-        : parseFloat(document.getElementById('fixedDelay').value) * 1000;
-
+    setAudio.currentTime = 0; setAudio.play().catch(e => {});
+    let d = document.getElementById('startMode').value === 'random' ? 2000 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
     setTimeout(() => {
-        if(videoTrack) {
-            videoTrack.applyConstraints({ advanced: [{ torch: true }] });
-        }
-
+        if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: true }] });
         setTimeout(() => {
-            playGunSound();
-            document.getElementById('status').innerText = "GO!!";
-
-            if(useFlash) {
-                document.getElementById('flash').style.opacity = 1;
-            }
-
+            playGunSound(); document.getElementById('status').innerText = "GO!!";
+            if(document.getElementById('screenFlashToggle').value === 'on') document.getElementById('flash').style.opacity = 1;
             setTimeout(() => {
                 document.getElementById('flash').style.opacity = 0;
-                if(videoTrack) {
-                    videoTrack.applyConstraints({ advanced: [{ torch: false }] });
-                }
-                document.getElementById('status').innerText = "READY";
-                startBtn.disabled = false;
+                if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: false }] });
+                document.getElementById('status').innerText = "READY"; btn.disabled = false;
             }, 150);
-        }, offset);
-    }, delay - offset);
+        }, 150);
+    }, d - 150);
 };
 
-const video = document.getElementById('video');
-const slider = document.getElementById('frameSlider');
-
-document.getElementById('videoInput').onchange = e => {
-    if (e.target.files[0]) {
-        video.src = URL.createObjectURL(e.target.files[0]);
-    }
-};
-
-video.onloadedmetadata = () => {
-    slider.max = video.duration * 1000;
-};
-
-video.ontimeupdate = () => {
-    if (!video.paused) {
-        slider.value = video.currentTime * 1000;
-    }
-};
-
-slider.oninput = () => {
-    video.pause();
-    video.currentTime = slider.value / 1000;
-};
-
-function togglePlay() {
-    video.paused ? video.play() : video.pause();
-}
-
-function stepFrame(dir) {
-    video.pause();
-    video.currentTime += dir * (1 / 60);
-    slider.value = video.currentTime * 1000;
-}
+const video = document.getElementById('video'), slider = document.getElementById('frameSlider');
+document.getElementById('videoInput').onchange = e => { if (e.target.files[0]) video.src = URL.createObjectURL(e.target.files[0]); };
+video.onloadedmetadata = () => slider.max = video.duration * 1000;
+video.ontimeupdate = () => { if (!video.paused) slider.value = video.currentTime * 1000; };
+slider.oninput = () => { video.pause(); video.currentTime = slider.value / 1000; };
+function togglePlay() { video.paused ? video.play() : video.pause(); }
+function stepFrame(dir) { video.pause(); video.currentTime += dir * (1 / 60); slider.value = video.currentTime * 1000; }
 
 function markStart() {
     startFrameTime = video.currentTime;
-    calculate();
+    document.getElementById('result').innerText = "スタート確定。ゴールを計測してください。";
 }
 
 function markGoal() {
-    goalFrameTime = video.currentTime;
-    calculate();
+    const max = parseInt(document.getElementById('playerCount').value);
+    if (startFrameTime === null) return alert("先にスタート点を設定してください。");
+    if (records.length >= max) return alert("設定した人数分の計測が完了しています。");
+
+    const diff = Math.abs(video.currentTime - startFrameTime).toFixed(3);
+    const order = records.length + 1;
+    records.push({ order: order, name: `選手 ${order}`, time: diff });
+
+    const tbody = document.querySelector('#recordList tbody');
+    const row = tbody.insertRow();
+    row.insertCell(0).innerText = order + "着";
+    const nameCell = row.insertCell(1);
+    const edit = document.createElement("input");
+    edit.className = "name-edit";
+    edit.value = `選手 ${order}`;
+    edit.oninput = (e) => { records[order - 1].name = e.target.value; };
+    nameCell.appendChild(edit);
+    row.insertCell(2).innerText = diff + " 秒";
+
+    document.getElementById('result').innerText = `${order}着記録完了: ${diff} 秒`;
 }
 
-function calculate() {
-    if (startFrameTime !== null && goalFrameTime !== null) {
-        document.getElementById('result').innerText =
-            Math.abs(goalFrameTime - startFrameTime).toFixed(3) + " 秒";
-    }
+function clearRecords() {
+    if(!confirm("削除するで？")) return;
+    records = []; document.querySelector('#recordList tbody').innerHTML = "";
+    document.getElementById('result').innerText = "クリアしました。";
+}
+
+function downloadCSV() {
+    if (records.length === 0) return alert("データがないで！");
+    let csv = "\uFEFF着順,名前,タイム\n";
+    records.forEach(r => { csv += `${r.order},${r.name},${r.time}\n`; });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = "計測結果.csv"; a.click();
 }
 
 document.getElementById('startMode').onchange = (e) => {
-    document.getElementById('fixedRow').style.display =
-        e.target.value === 'fixed' ? 'flex' : 'none';
+    document.getElementById('fixedRow').style.display = e.target.value === 'fixed' ? 'flex' : 'none';
 };
 </script>
 
 </body>
 </html>
+
