@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -6,7 +7,7 @@
 
     <title>TF陸上計測くん - 陸上タイム計測・動画解析ツール</title>
 
-    <meta name="description" content="陸上競技のタイム計測と動画解析。スマホのフラッシュによるスタート特定機能、コマ送り解析機能を搭載.">
+    <meta name="description" content="陸上競技のタイム計測と動画解析。スマホのフラッシュによるスタート特定機能、コマ送り解析機能を搭載。">
 
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="favicon.png">
@@ -369,10 +370,8 @@
 </div>
 
 <script>
-let videoTrack = null, startFrameTime = null, records = [];
-// 音声ファイルの読み込み
+let audioCtx = null, videoTrack = null, startFrameTime = null, records = [];
 const setAudio = new Audio('セット.mp3');
-const gunAudio = new Audio('号砲.mp3'); // 半角ドットに修正
 
 document.getElementById('shareBtn').onclick = async () => {
     if (navigator.share) {
@@ -382,9 +381,49 @@ document.getElementById('shareBtn').onclick = async () => {
 
 function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
 
+// 音源合成版に戻した playGunSound
 function playGunSound() {
-    gunAudio.currentTime = 0;
-    gunAudio.play().catch(e => console.log("Audio play failed", e));
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+
+    // --- 低音の衝撃 ---
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+    
+    oscGain.gain.setValueAtTime(2.0, audioCtx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+    
+    osc.connect(oscGain);
+    oscGain.connect(masterGain);
+
+    // --- 破裂音（ホワイトノイズ） ---
+    const bufferSize = audioCtx.sampleRate * 0.1;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+    
+    const noise = audioCtx.createBufferSource();
+    const noiseGain = audioCtx.createGain();
+    noise.buffer = buffer;
+    
+    noiseGain.gain.setValueAtTime(1.5, audioCtx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    
+    noise.connect(noiseGain);
+    noiseGain.connect(masterGain);
+
+    osc.start();
+    noise.start();
+    
+    osc.stop(audioCtx.currentTime + 0.5);
+    noise.stop(audioCtx.currentTime + 0.2);
 }
 
 document.getElementById('startBtn').onclick = async () => {
@@ -468,4 +507,3 @@ document.getElementById('startMode').onchange = (e) => {
 
 </body>
 </html>
-
