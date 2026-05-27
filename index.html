@@ -3,119 +3,392 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <title>TF陸上計測くん - 陸上タイム計測・動画解析ツール</title>
+
     <meta name="description" content="陸上競技のタイム計測と動画解析。スマホのフラッシュによるスタート特定機能、コマ送り解析機能を搭載。">
-    
+
+    <!-- アイコン -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+
+    <!-- PWA系 -->
+    <meta name="theme-color" content="#000000">
+
     <style>
-        body { margin: 0; background: #000; color: white; font-family: sans-serif; padding: 20px; box-sizing: border-box; position: relative; }
-        h1 { text-align: center; color: #4fc3f7; margin-top: 40px; font-size: 26px; }
-        .sub-title { text-align: center; color: #aaa; font-size: 14px; margin-top: -10px; margin-bottom: 20px; }
-        .section { background: #111; padding: 20px; border-radius: 20px; margin-bottom: 24px; border: 1px solid #333; }
-        .row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-        label { font-size: 14px; color: #aaa; }
-        button, input, select { padding: 14px; font-size: 16px; border: none; border-radius: 14px; background: #222; color: white; }
-        button { cursor: pointer; background: #444; font-weight: bold; }
-        #startBtn { background: #e91e63; color: white; font-size: 20px; width: 100%; margin-top: 10px; }
-        #startBtn:disabled { background: #555; opacity: 0.6; }
-        #status { font-size: 40px; text-align: center; font-weight: bold; min-height: 60px; color: #4caf50; margin: 10px 0; }
-        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 9999; }
+        body {
+            margin: 0;
+            background: #000;
+            color: white;
+            font-family: sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
 
-        .video-container { width: 100%; background: #000; border-radius: 10px; overflow: hidden; border: 1px solid #444; }
-        video { width: 100%; display: block; }
-        input[type="range"] { -webkit-appearance: none; width: 100%; height: 16px; background: #333; border-radius: 8px; margin: 20px 0; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; background: #4fc3f7; border-radius: 50%; border: 2px solid #fff; }
-        
-        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .btn-play { grid-column: span 2; background: #fff; color: #000; }
-        .btn-start-mark { background: #2e7d32; }
-        .btn-goal-mark { background: #1565c0; }
-        
-        #result { font-size: 40px; text-align: center; margin-top: 20px; color: #ffeb3b; font-weight: bold; }
+        h1 {
+            text-align: center;
+            color: #4fc3f7;
+            margin-top: 40px;
+            font-size: 26px;
+        }
 
-        #helpBtn { position: absolute; top: 10px; right: 10px; background: #4fc3f7; color: #000; padding: 8px 15px; border-radius: 10px; font-size: 14px; z-index: 100; }
-        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; padding: 20px; overflow-y: auto; }
-        .modal-content { background: #222; padding: 20px; border-radius: 20px; line-height: 1.6; font-size: 14px; }
-        .modal-content h2 { color: #4fc3f7; font-size: 18px; border-bottom: 1px solid #444; padding-bottom: 10px; }
-        .close-btn { background: #444; width: 100%; margin-top: 20px; padding: 12px; }
-        .step-box { background: #333; padding: 10px; border-radius: 10px; margin-bottom: 10px; }
+        .sub-title {
+            text-align: center;
+            color: #aaa;
+            font-size: 14px;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            background: #111;
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+            border: 1px solid #333;
+        }
+
+        .row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        label {
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        button,
+        input,
+        select {
+            padding: 14px;
+            font-size: 16px;
+            border: none;
+            border-radius: 14px;
+            background: #222;
+            color: white;
+        }
+
+        button {
+            cursor: pointer;
+            background: #444;
+            font-weight: bold;
+        }
+
+        #startBtn {
+            background: #e91e63;
+            color: white;
+            font-size: 20px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        #startBtn:disabled {
+            background: #555;
+            opacity: 0.6;
+        }
+
+        #status {
+            font-size: 40px;
+            text-align: center;
+            font-weight: bold;
+            min-height: 60px;
+            color: #4caf50;
+            margin: 10px 0;
+        }
+
+        #flash {
+            position: fixed;
+            inset: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .video-container {
+            width: 100%;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #444;
+        }
+
+        video {
+            width: 100%;
+            display: block;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 16px;
+            background: #333;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            background: #4fc3f7;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-play {
+            grid-column: span 2;
+            background: #fff;
+            color: #000;
+        }
+
+        .btn-start-mark {
+            background: #2e7d32;
+        }
+
+        .btn-goal-mark {
+            background: #1565c0;
+        }
+
+        #result {
+            font-size: 40px;
+            text-align: center;
+            margin-top: 20px;
+            color: #ffeb3b;
+            font-weight: bold;
+        }
+
+        #helpBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #4fc3f7;
+            color: #000;
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 100;
+        }
+
+        #modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: #222;
+            padding: 20px;
+            border-radius: 20px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .modal-content h2 {
+            color: #4fc3f7;
+            font-size: 18px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        .close-btn {
+            background: #444;
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+        }
+
+        .step-box {
+            background: #333;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
+
 <body>
 
 <div id="flash"></div>
-<button id="helpBtn" onclick="toggleModal(true)">使い方</button>
+
+<button id="helpBtn" onclick="toggleModal(true)">
+    使い方
+</button>
 
 <div id="modal">
     <div class="modal-content">
+
         <h2>TF陸上計測くん 使い方マニュアル</h2>
-        <p>正確な計測のためにスマホを2台使用します。</p>
-        
+
+        <p>
+            正確な計測のためにスマホを2台使用します。
+        </p>
+
         <div class="step-box">
             <b>1. スタート地点の設置</b><br>
-            スタートラインの横に本アプリを開いたスマホを設置します。画面のフラッシュ（または背面のライト）がゴール地点から見える向きに固定してください。
+            スタートラインの横に本アプリを開いたスマホを設置します。
+            画面のフラッシュ（または背面ライト）がゴール地点から見える向きに固定してください。
         </div>
 
         <div class="step-box">
             <b>2. ゴール地点での撮影</b><br>
-            ゴールラインの真横から動画を撮影します。「スタートスマホの光」と「選手のゴール」が1つの画面に収まるようにしてください。
+            ゴールラインの真横から動画を撮影します。
+            「スタートスマホの光」と「選手のゴール」が1つの画面に収まるようにしてください。
         </div>
 
         <div class="step-box">
             <b>3. 解析の手順</b><br>
-            撮影した動画を下の【解析ツール】で読み込み、コマ送り機能を使って「光った瞬間」をスタート点、「ゴールライン通過」をゴール点に設定します。
+            撮影した動画を下の【解析ツール】で読み込み、
+            コマ送り機能を使って
+            「光った瞬間」をスタート点、
+            「ゴールライン通過」をゴール点に設定します。
         </div>
 
-        <p>※iPhoneの場合、ライトが光らないことがあるため「画面フラッシュ」を有効にして、画面をゴール側に向けて設置することを推奨します。</p>
+        <p>
+            ※iPhoneの場合、ライトが光らないことがあるため、
+            「画面フラッシュ」を有効にして、
+            画面をゴール側に向けることを推奨します。
+        </p>
 
-        <button class="close-btn" onclick="toggleModal(false)">閉じる</button>
+        <button class="close-btn" onclick="toggleModal(false)">
+            閉じる
+        </button>
+
     </div>
 </div>
 
 <div class="section">
+
     <h1>TF陸上計測くん</h1>
-    <div class="sub-title">陸上タイム計測・動画解析</div>
-    <div id="status">READY</div>
+
+    <div class="sub-title">
+        陸上タイム計測・動画解析
+    </div>
+
+    <div id="status">
+        READY
+    </div>
+
     <div class="row">
         <label>画面フラッシュ</label>
+
         <select id="screenFlashToggle">
             <option value="on">有効</option>
             <option value="off">無効</option>
         </select>
     </div>
+
     <div class="row">
         <label>スタート方式</label>
+
         <select id="startMode">
             <option value="random">ランダム</option>
             <option value="fixed">固定</option>
         </select>
     </div>
+
     <div class="row" id="fixedRow" style="display:none;">
         <label>秒数</label>
-        <input type="number" id="fixedDelay" value="2.0" step="0.1">
+
+        <input
+            type="number"
+            id="fixedDelay"
+            value="2.0"
+            step="0.1"
+        >
     </div>
+
     <div class="row">
         <label>ライト先行調整 (ms)</label>
-        <input type="number" id="torchOffset" value="150">
+
+        <input
+            type="number"
+            id="torchOffset"
+            value="150"
+        >
     </div>
-    <button id="startBtn">START SIGNAL</button>
+
+    <button id="startBtn">
+        START SIGNAL
+    </button>
+
 </div>
 
 <div class="section">
+
     <h2>解析ツール</h2>
-    <input type="file" id="videoInput" accept="video/*" style="margin-bottom:15px; width:100%;">
+
+    <input
+        type="file"
+        id="videoInput"
+        accept="video/*"
+        style="margin-bottom:15px; width:100%;"
+    >
+
     <div class="video-container">
         <video id="video" playsinline></video>
     </div>
-    <input type="range" id="frameSlider" min="0" value="0">
+
+    <input
+        type="range"
+        id="frameSlider"
+        min="0"
+        value="0"
+    >
+
     <div class="controls-grid">
-        <button onclick="togglePlay()" id="playBtn" class="btn-play">再生 / 停止</button>
-        <button onclick="stepFrame(-1)">戻る</button>
-        <button onclick="stepFrame(1)">進む</button>
-        <button onclick="markStart()" class="btn-start-mark">スタート点</button>
-        <button onclick="markGoal()" class="btn-goal-mark">ゴール点</button>
+
+        <button
+            onclick="togglePlay()"
+            id="playBtn"
+            class="btn-play"
+        >
+            再生 / 停止
+        </button>
+
+        <button onclick="stepFrame(-1)">
+            戻る
+        </button>
+
+        <button onclick="stepFrame(1)">
+            進む
+        </button>
+
+        <button
+            onclick="markStart()"
+            class="btn-start-mark"
+        >
+            スタート点
+        </button>
+
+        <button
+            onclick="markGoal()"
+            class="btn-goal-mark"
+        >
+            ゴール点
+        </button>
+
     </div>
-    <div id="result">0.000 秒</div>
+
+    <div id="result">
+        0.000 秒
+    </div>
+
 </div>
 
 <script>
@@ -124,89 +397,267 @@ let videoTrack = null;
 let startFrameTime = null;
 let goalFrameTime = null;
 
-// 音声ファイルの読み込み
 const setAudio = new Audio('セット.mp3');
 
-function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
+function toggleModal(show) {
+    document.getElementById('modal').style.display =
+        show ? 'block' : 'none';
+}
 
-// 競技会仕様の電子号砲
 function playGunSound() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const g = audioCtx.createGain(); g.connect(audioCtx.destination);
-    
-    // 低音（ドン！）
+
+    if (!audioCtx) {
+        audioCtx = new (
+            window.AudioContext ||
+            window.webkitAudioContext
+        )();
+    }
+
+    const g = audioCtx.createGain();
+    g.connect(audioCtx.destination);
+
+    // 低音
     const o = audioCtx.createOscillator();
+
     o.type = 'triangle';
-    o.frequency.setValueAtTime(150, audioCtx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+
+    o.frequency.setValueAtTime(
+        150,
+        audioCtx.currentTime
+    );
+
+    o.frequency.exponentialRampToValueAtTime(
+        40,
+        audioCtx.currentTime + 0.1
+    );
+
     const og = audioCtx.createGain();
-    og.gain.setValueAtTime(2.0, audioCtx.currentTime);
-    og.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-    o.connect(og); og.connect(g);
-    
-    // ホワイトノイズ（パァン！）
-    const b = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
-    const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    const n = audioCtx.createBufferSource(); n.buffer = b;
+
+    og.gain.setValueAtTime(
+        2.0,
+        audioCtx.currentTime
+    );
+
+    og.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioCtx.currentTime + 0.4
+    );
+
+    o.connect(og);
+    og.connect(g);
+
+    // ノイズ
+    const b = audioCtx.createBuffer(
+        1,
+        audioCtx.sampleRate * 0.15,
+        audioCtx.sampleRate
+    );
+
+    const d = b.getChannelData(0);
+
+    for (let i = 0; i < d.length; i++) {
+        d[i] = Math.random() * 2 - 1;
+    }
+
+    const n = audioCtx.createBufferSource();
+    n.buffer = b;
+
     const ng = audioCtx.createGain();
-    ng.gain.setValueAtTime(0.8, audioCtx.currentTime);
-    ng.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-    n.connect(ng); ng.connect(g);
-    
-    o.start(); n.start();
-    o.stop(audioCtx.currentTime + 0.4); n.stop(audioCtx.currentTime + 0.4);
+
+    ng.gain.setValueAtTime(
+        0.8,
+        audioCtx.currentTime
+    );
+
+    ng.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioCtx.currentTime + 0.15
+    );
+
+    n.connect(ng);
+    ng.connect(g);
+
+    o.start();
+    n.start();
+
+    o.stop(audioCtx.currentTime + 0.4);
+    n.stop(audioCtx.currentTime + 0.4);
 }
 
 const startBtn = document.getElementById('startBtn');
+
 startBtn.onclick = async () => {
+
     startBtn.disabled = true;
+
     if (!videoTrack) {
+
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            videoTrack = stream.getVideoTracks()[0];
+
+            const stream =
+                await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment'
+                    }
+                });
+
+            videoTrack =
+                stream.getVideoTracks()[0];
+
         } catch(e) {}
     }
-    if (!audioCtx) audioCtx = new AudioContext();
 
-    document.getElementById('status').innerText = "SET...";
-    
-    // 「セット.mp3」を再生
+    if (!audioCtx) {
+        audioCtx = new AudioContext();
+    }
+
+    document.getElementById('status').innerText =
+        "SET...";
+
     setAudio.currentTime = 0;
-    setAudio.play().catch(e => console.log("Audio play error:", e));
 
-    const offset = parseInt(document.getElementById('torchOffset').value);
-    const useFlash = document.getElementById('screenFlashToggle').value === 'on';
-    let delay = document.getElementById('startMode').value === 'random' ? 2000 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
+    setAudio.play().catch(e => {
+        console.log("Audio play error:", e);
+    });
+
+    const offset = parseInt(
+        document.getElementById('torchOffset').value
+    );
+
+    const useFlash =
+        document.getElementById('screenFlashToggle').value === 'on';
+
+    let delay =
+        document.getElementById('startMode').value === 'random'
+        ? 2000 + Math.random() * 1500
+        : parseFloat(
+            document.getElementById('fixedDelay').value
+          ) * 1000;
 
     setTimeout(() => {
-        if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: true }] });
+
+        if(videoTrack) {
+
+            videoTrack.applyConstraints({
+                advanced: [{ torch: true }]
+            });
+        }
+
         setTimeout(() => {
+
             playGunSound();
-            document.getElementById('status').innerText = "GO!!";
-            if(useFlash) document.getElementById('flash').style.opacity = 1;
+
+            document.getElementById('status').innerText =
+                "GO!!";
+
+            if(useFlash) {
+                document.getElementById('flash').style.opacity = 1;
+            }
+
             setTimeout(() => {
+
                 document.getElementById('flash').style.opacity = 0;
-                if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: false }] });
-                document.getElementById('status').innerText = "READY";
+
+                if(videoTrack) {
+
+                    videoTrack.applyConstraints({
+                        advanced: [{ torch: false }]
+                    });
+                }
+
+                document.getElementById('status').innerText =
+                    "READY";
+
                 startBtn.disabled = false;
+
             }, 150);
+
         }, offset);
+
     }, delay - offset);
 };
 
 const video = document.getElementById('video');
 const slider = document.getElementById('frameSlider');
-document.getElementById('videoInput').onchange = e => { if (e.target.files[0]) video.src = URL.createObjectURL(e.target.files[0]); };
-video.onloadedmetadata = () => { slider.max = video.duration * 1000; };
-video.ontimeupdate = () => { if (!video.paused) slider.value = video.currentTime * 1000; };
-slider.oninput = () => { video.pause(); video.currentTime = slider.value / 1000; };
-function togglePlay() { video.paused ? video.play() : video.pause(); }
-function stepFrame(dir) { video.pause(); video.currentTime += dir * (1 / 60); slider.value = video.currentTime * 1000; }
-function markStart() { startFrameTime = video.currentTime; calculate(); }
-function markGoal() { goalFrameTime = video.currentTime; calculate(); }
-function calculate() { if (startFrameTime !== null && goalFrameTime !== null) document.getElementById('result').innerText = Math.abs(goalFrameTime - startFrameTime).toFixed(3) + " 秒"; }
-document.getElementById('startMode').onchange = (e) => { document.getElementById('fixedRow').style.display = e.target.value === 'fixed' ? 'flex' : 'none'; };
+
+document.getElementById('videoInput').onchange = e => {
+
+    if (e.target.files[0]) {
+
+        video.src =
+            URL.createObjectURL(
+                e.target.files[0]
+            );
+    }
+};
+
+video.onloadedmetadata = () => {
+    slider.max = video.duration * 1000;
+};
+
+video.ontimeupdate = () => {
+
+    if (!video.paused) {
+        slider.value = video.currentTime * 1000;
+    }
+};
+
+slider.oninput = () => {
+
+    video.pause();
+
+    video.currentTime =
+        slider.value / 1000;
+};
+
+function togglePlay() {
+    video.paused
+        ? video.play()
+        : video.pause();
+}
+
+function stepFrame(dir) {
+
+    video.pause();
+
+    video.currentTime += dir * (1 / 60);
+
+    slider.value =
+        video.currentTime * 1000;
+}
+
+function markStart() {
+    startFrameTime = video.currentTime;
+    calculate();
+}
+
+function markGoal() {
+    goalFrameTime = video.currentTime;
+    calculate();
+}
+
+function calculate() {
+
+    if (
+        startFrameTime !== null &&
+        goalFrameTime !== null
+    ) {
+
+        document.getElementById('result').innerText =
+            Math.abs(
+                goalFrameTime - startFrameTime
+            ).toFixed(3) + " 秒";
+    }
+}
+
+document.getElementById('startMode').onchange = (e) => {
+
+    document.getElementById('fixedRow').style.display =
+        e.target.value === 'fixed'
+        ? 'flex'
+        : 'none';
+};
 </script>
+
 </body>
 </html>
-
