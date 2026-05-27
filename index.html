@@ -369,8 +369,10 @@
 </div>
 
 <script>
-let audioCtx = null, videoTrack = null, startFrameTime = null, records = [];
+let videoTrack = null, startFrameTime = null, records = [];
+// 音声ファイルの読み込み
 const setAudio = new Audio('セット.mp3');
+const gunAudio = new Audio('号砲．MP3'); // リポジトリ内のファイル名に合わせる
 
 document.getElementById('shareBtn').onclick = async () => {
     if (navigator.share) {
@@ -380,16 +382,10 @@ document.getElementById('shareBtn').onclick = async () => {
 
 function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
 
+// 号砲再生関数をmp3再生に書き換え
 function playGunSound() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const g = audioCtx.createGain(); g.connect(audioCtx.destination);
-    const o = audioCtx.createOscillator(); o.type = 'triangle';
-    o.frequency.setValueAtTime(150, audioCtx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-    const og = audioCtx.createGain(); og.gain.setValueAtTime(2.0, audioCtx.currentTime);
-    og.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-    o.connect(og); og.connect(g);
-    o.start(); o.stop(audioCtx.currentTime + 0.4);
+    gunAudio.currentTime = 0;
+    gunAudio.play().catch(e => console.log("Audio play failed", e));
 }
 
 document.getElementById('startBtn').onclick = async () => {
