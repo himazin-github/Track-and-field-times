@@ -378,7 +378,10 @@
 
 <script>
 let audioCtx = null, videoTrack = null, startFrameTime = null, records = [];
-const setAudio = new Audio('セット.mp3');
+
+document.getElementById('startMode').onchange = function() {
+    document.getElementById('fixedRow').style.display = this.value === 'fixed' ? 'flex' : 'none';
+};
 
 document.getElementById('shareBtn').onclick = async () => {
     if (navigator.share) {
@@ -388,68 +391,108 @@ document.getElementById('shareBtn').onclick = async () => {
 
 function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
 
-function playGunSound() {
+function getAudioCtx() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
-    const masterGain = audioCtx.createGain();
-    masterGain.connect(audioCtx.destination);
+    return audioCtx;
+}
 
-    const osc = audioCtx.createOscillator();
-    const oscGain = audioCtx.createGain();
+function playSetSound() {
+    const utter = new SpeechSynthesisUtterance('Set');
+    utter.lang = 'en-US';
+    utter.rate = 0.9;
+    utter.pitch = 1.0;
+    utter.volume = 1.0;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utter);
+}
+
+function playGunSound() {
+    const ctx = getAudioCtx();
+
+    const masterGain = ctx.createGain();
+    masterGain.connect(ctx.destination);
+
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(120, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-    
-    oscGain.gain.setValueAtTime(2.0, audioCtx.currentTime);
-    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-    
+    osc.frequency.setValueAtTime(120, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
+    oscGain.gain.setValueAtTime(2.0, ctx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
     osc.connect(oscGain);
     oscGain.connect(masterGain);
 
-    const bufferSize = audioCtx.sampleRate * 0.1;
-    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const bufferSize = ctx.sampleRate * 0.1;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-    }
-    
-    const noise = audioCtx.createBufferSource();
-    const noiseGain = audioCtx.createGain();
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const noise = ctx.createBufferSource();
+    const noiseGain = ctx.createGain();
     noise.buffer = buffer;
-    
-    noiseGain.gain.setValueAtTime(1.5, audioCtx.currentTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-    
+    noiseGain.gain.setValueAtTime(1.5, ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
     noise.connect(noiseGain);
     noiseGain.connect(masterGain);
 
     osc.start();
     noise.start();
-    
-    osc.stop(audioCtx.currentTime + 0.5);
-    noise.stop(audioCtx.currentTime + 0.2);
+    osc.stop(ctx.currentTime + 0.5);
+    noise.stop(ctx.currentTime + 0.2);
 }
 
 document.getElementById('startBtn').onclick = async () => {
-    const btn = document.getElementById('startBtn'); btn.disabled = true;
+    const btn = document.getElementById('startBtn');
+    btn.disabled = true;
+
+    // AudioContext をユーザー操作で起動
+    getAudioCtx();
+
+    // トーチ用カメラ取得（失敗しても続行）
     if (!videoTrack) {
-        try { const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); videoTrack = s.getVideoTracks()[0]; } catch(e) {}
+        try {
+            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            videoTrack = s.getVideoTracks()[0];
+        } catch(e) {
+            console.warn('torch unavailable:', e);
+        }
     }
+
     document.getElementById('status').innerText = "SET...";
-    setAudio.currentTime = 0; setAudio.play().catch(e => {});
-    const offset = parseInt(document.getElementById('torchOffset').value);
-    let d = document.getElementById('startMode').value === 'random' ? 2000 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
+
+    // セット音をWeb Audio APIで再生
+    playSetSound();
+
+    const offset = parseInt(document.getElementById('torchOffset').value) || 150;
+    const d = document.getElementById('startMode').value === 'random'
+        ? 2000 + Math.random() * 1500
+        : parseFloat(document.getElementById('fixedDelay').value) * 1000;
+
     setTimeout(() => {
-        if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: true }] });
+        // ライト点灯
+        if (videoTrack) {
+            videoTrack.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
+        }
+
         setTimeout(() => {
-            playGunSound(); document.getElementById('status').innerText = "GO!!";
-            if(document.getElementById('screenFlashToggle').value === 'on') document.getElementById('flash').style.opacity = 1;
+            // 銃声 + GO表示 + 画面フラッシュ
+            playGunSound();
+            document.getElementById('status').innerText = "GO!!";
+            if (document.getElementById('screenFlashToggle').value === 'on') {
+                document.getElementById('flash').style.opacity = 1;
+            }
+
             setTimeout(() => {
                 document.getElementById('flash').style.opacity = 0;
-                if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: false }] });
-                document.getElementById('status').innerText = "READY"; btn.disabled = false;
+                if (videoTrack) {
+                    videoTrack.applyConstraints({ advanced: [{ torch: false }] }).catch(() => {});
+                }
+                document.getElementById('status').innerText = "READY";
+                btn.disabled = false;
             }, 150);
+
         }, offset);
+
     }, d - offset);
 };
 
@@ -498,9 +541,9 @@ function markStart() {
 
 function markGoal() {
     if (startFrameTime === null) return alert("先にスタート点を設定してください。");
-    
+
     const mode = document.getElementById('measurementMode').value;
-    
+
     if (mode === 'single') {
         const max = parseInt(document.getElementById('playerCount').value);
         if (records.length >= max) return alert("設定した人数分の計測が完了しています。");
@@ -511,7 +554,7 @@ function markGoal() {
 
         renderSingleRow(order, diff);
         document.getElementById('result').innerText = `${order}着の記録完了: ${diff} 秒`;
-    } 
+    }
     else if (mode === 'single_lap') {
         const currentTotalTime = Math.abs(video.currentTime - startFrameTime);
         let lapTime = 0;
@@ -534,7 +577,7 @@ function markGoal() {
 
         renderRelayRow(recordItem);
         document.getElementById('result').innerText = `ラップ ${pointNum}確定: ${recordItem.lapTime} 秒 (累積: ${recordItem.totalTime} 秒)`;
-    } 
+    }
     else {
         if (records.length >= 4) return alert("4走すべての計測が完了しています。");
 
@@ -584,7 +627,7 @@ function renderRelayRow(item) {
     const tbody = document.querySelector('#recordList tbody');
     const row = tbody.insertRow();
     row.insertCell(0).innerText = item.runner;
-    
+
     const nameCell = row.insertCell(1);
     const edit = document.createElement("input");
     edit.className = "name-edit";
@@ -592,19 +635,19 @@ function renderRelayRow(item) {
     const currentIndex = records.length - 1;
     edit.oninput = (e) => { records[currentIndex].name = e.target.value; };
     nameCell.appendChild(edit);
-    
+
     row.insertCell(2).innerText = item.lapTime + " 秒";
     row.insertCell(3).innerText = item.totalTime + " 秒";
 }
 
 function clearRecordsWithoutConfirm() {
-    records = []; 
+    records = [];
     document.querySelector('#recordList tbody').innerHTML = "";
     document.getElementById('result').innerText = "スタート点を設定してください";
 }
 
 function clearRecords() {
-    if(!confirm("データを削除しますか？")) return;
+    if (!confirm("データを削除しますか？")) return;
     clearRecordsWithoutConfirm();
 }
 
@@ -612,7 +655,7 @@ function downloadCSV() {
     if (records.length === 0) return alert("データがありません。");
     const mode = document.getElementById('measurementMode').value;
     let csv = "\uFEFF";
-    
+
     if (mode === 'single') {
         csv += "着順,名前,タイム\n";
         records.forEach(r => { csv += `${r.order},${r.name},${r.time}\n`; });
@@ -622,4 +665,14 @@ function downloadCSV() {
     } else {
         csv += "走者,名前,区間ラップ(秒),累積タイム(秒)\n";
         records.forEach(r => { csv += `${r.runner},${r.name},${r.lapTime},${r.totalTime}\n`; });
+    }
 
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'keisoku.csv';
+    a.click();
+}
+</script>
+</body>
+</html>
