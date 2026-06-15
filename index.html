@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -273,29 +274,30 @@
           
         </div>
 
-        <p>正確な計測のためにスマートフォンを2台使用します。</p>
+        <p>正確な計測のためにスマホを2台使用します。</p>
 
         <div class="step-box">
             <b>1. スタート地点の設置</b><br>
-            スタートラインの横に本アプリを開いたスマートフォンを設置します。
+            スタートラインの横に本アプリを開いたスマホを設置します。
             画面のフラッシュ（または背面ライト）がゴール地点から見える向きに固定してください。
         </div>
 
         <div class="step-box">
             <b>2. ゴール地点での撮影</b><br>
-            ゴールラインの真横、または走るコースの横から動画を撮影します。
-            「スタートスマートフォンの光」と「各通過ポイント」が1つの画面に収まるようにしてください。
+            ゴールラインの真横から動画を撮影します。
+            「スタートスマホの光」と「選手のゴール」が1つの画面に収まるようにしてください。
         </div>
 
         <div class="step-box">
             <b>3. 解析の手順</b><br>
-            撮影した動画を下の【解析ツール】で読み込み、コマ送り機能を使って「光った瞬間」をスタート点に設定します。<br>
-            <b>【リレー / シングルラップモードの場合】</b><br>
-            各通過点（バトンパスや10m/100mごとの目印）を通過した瞬間、またはゴールライン通過の瞬間に「ラップ／ゴール点」をタップしていくことで、区間ごとのタイムが自動計算されます。
+            撮影した動画を下の【解析ツール】で読み込み、
+            コマ送り機能を使って
+            「光った瞬間」をスタート点、
+            各選手の「ゴールライン通過」をゴール点に設定します。
         </div>
 
         <p>
-            ※名前欄は直接編集可能です。
+            ※名前欄は直接編集可能です。計測人数をセットしてからゴール点を追加していくとスムーズです。
         </p>
 
         <button class="close-btn" onclick="toggleModal(false)" style="width:100%; margin-top:20px; background:#444; color:white; padding:12px; border-radius:14px;">閉じる</button>
@@ -334,15 +336,6 @@
 <div class="section">
     <h2>解析ツール</h2>
     <div class="row">
-        <label>計測モード</label>
-        <select id="measurementMode" onchange="onChangeMeasurementMode()">
-            <option value="single">通常計測</option>
-            <option value="single_lap">ラップタイム計測</option>
-            <option value="4x100">4×100m リレー</option>
-            <option value="4x400">4×400m リレー</option>
-        </select>
-    </div>
-    <div class="row" id="playerCountRow">
         <label>計測人数</label>
         <input type="number" id="playerCount" value="1" min="1" style="margin-bottom:10px;">
     </div>
@@ -356,7 +349,7 @@
         <button onclick="stepFrame(-1)">戻る</button>
         <button onclick="stepFrame(1)">進む</button>
         <button onclick="markStart()" class="btn-start-mark">スタート点</button>
-        <button onclick="markGoal()" class="btn-goal-mark" id="goalBtnLabel">ゴール点 (追加)</button>
+        <button onclick="markGoal()" class="btn-goal-mark">ゴール点 (追加)</button>
     </div>
     <div id="result">スタート点を設定してください</div>
 
@@ -365,7 +358,7 @@
         <button onclick="clearRecords()" style="width:100%; background:#444; color:#ff5252;">データをクリア</button>
         <table id="recordList">
             <thead>
-                <tr id="tableHeader">
+                <tr>
                     <th style="width:20%">着順</th>
                     <th>名前</th>
                     <th style="width:30%">タイム</th>
@@ -378,10 +371,7 @@
 
 <script>
 let audioCtx = null, videoTrack = null, startFrameTime = null, records = [];
-
-document.getElementById('startMode').onchange = function() {
-    document.getElementById('fixedRow').style.display = this.value === 'fixed' ? 'flex' : 'none';
-};
+const setAudio = new Audio('セット.mp3');
 
 document.getElementById('shareBtn').onclick = async () => {
     if (navigator.share) {
@@ -391,108 +381,71 @@ document.getElementById('shareBtn').onclick = async () => {
 
 function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
 
-function getAudioCtx() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    return audioCtx;
-}
-
-function playSetSound() {
-    const utter = new SpeechSynthesisUtterance('Set');
-    utter.lang = 'en-US';
-    utter.rate = 0.9;
-    utter.pitch = 1.0;
-    utter.volume = 1.0;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utter);
-}
-
+// 音源合成版に戻した playGunSound
 function playGunSound() {
-    const ctx = getAudioCtx();
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
 
-    const masterGain = ctx.createGain();
-    masterGain.connect(ctx.destination);
-
-    const osc = ctx.createOscillator();
-    const oscGain = ctx.createGain();
+    // --- 低音の衝撃 ---
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(120, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
-    oscGain.gain.setValueAtTime(2.0, ctx.currentTime);
-    oscGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+    
+    oscGain.gain.setValueAtTime(2.0, audioCtx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+    
     osc.connect(oscGain);
     oscGain.connect(masterGain);
 
-    const bufferSize = ctx.sampleRate * 0.1;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    // --- 破裂音（ホワイトノイズ） ---
+    const bufferSize = audioCtx.sampleRate * 0.1;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
-    const noise = ctx.createBufferSource();
-    const noiseGain = ctx.createGain();
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+    
+    const noise = audioCtx.createBufferSource();
+    const noiseGain = audioCtx.createGain();
     noise.buffer = buffer;
-    noiseGain.gain.setValueAtTime(1.5, ctx.currentTime);
-    noiseGain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    
+    noiseGain.gain.setValueAtTime(1.5, audioCtx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    
     noise.connect(noiseGain);
     noiseGain.connect(masterGain);
 
     osc.start();
     noise.start();
-    osc.stop(ctx.currentTime + 0.5);
-    noise.stop(ctx.currentTime + 0.2);
+    
+    osc.stop(audioCtx.currentTime + 0.5);
+    noise.stop(audioCtx.currentTime + 0.2);
 }
 
 document.getElementById('startBtn').onclick = async () => {
-    const btn = document.getElementById('startBtn');
-    btn.disabled = true;
-
-    // AudioContext をユーザー操作で起動
-    getAudioCtx();
-
-    // トーチ用カメラ取得（失敗しても続行）
+    const btn = document.getElementById('startBtn'); btn.disabled = true;
     if (!videoTrack) {
-        try {
-            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            videoTrack = s.getVideoTracks()[0];
-        } catch(e) {
-            console.warn('torch unavailable:', e);
-        }
+        try { const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); videoTrack = s.getVideoTracks()[0]; } catch(e) {}
     }
-
     document.getElementById('status').innerText = "SET...";
-
-    // セット音をWeb Audio APIで再生
-    playSetSound();
-
-    const offset = parseInt(document.getElementById('torchOffset').value) || 150;
-    const d = document.getElementById('startMode').value === 'random'
-        ? 2000 + Math.random() * 1500
-        : parseFloat(document.getElementById('fixedDelay').value) * 1000;
-
+    setAudio.currentTime = 0; setAudio.play().catch(e => {});
+    const offset = parseInt(document.getElementById('torchOffset').value);
+    let d = document.getElementById('startMode').value === 'random' ? 2000 + Math.random() * 1500 : parseFloat(document.getElementById('fixedDelay').value) * 1000;
     setTimeout(() => {
-        // ライト点灯
-        if (videoTrack) {
-            videoTrack.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
-        }
-
+        if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: true }] });
         setTimeout(() => {
-            // 銃声 + GO表示 + 画面フラッシュ
-            playGunSound();
-            document.getElementById('status').innerText = "GO!!";
-            if (document.getElementById('screenFlashToggle').value === 'on') {
-                document.getElementById('flash').style.opacity = 1;
-            }
-
+            playGunSound(); document.getElementById('status').innerText = "GO!!";
+            if(document.getElementById('screenFlashToggle').value === 'on') document.getElementById('flash').style.opacity = 1;
             setTimeout(() => {
                 document.getElementById('flash').style.opacity = 0;
-                if (videoTrack) {
-                    videoTrack.applyConstraints({ advanced: [{ torch: false }] }).catch(() => {});
-                }
-                document.getElementById('status').innerText = "READY";
-                btn.disabled = false;
+                if(videoTrack) videoTrack.applyConstraints({ advanced: [{ torch: false }] });
+                document.getElementById('status').innerText = "READY"; btn.disabled = false;
             }, 150);
-
         }, offset);
-
     }, d - offset);
 };
 
@@ -504,113 +457,20 @@ slider.oninput = () => { video.pause(); video.currentTime = slider.value / 1000;
 function togglePlay() { video.paused ? video.play() : video.pause(); }
 function stepFrame(dir) { video.pause(); video.currentTime += dir * (1 / 60); slider.value = video.currentTime * 1000; }
 
-function onChangeMeasurementMode() {
-    const mode = document.getElementById('measurementMode').value;
-    const playerCountRow = document.getElementById('playerCountRow');
-    const goalBtnLabel = document.getElementById('goalBtnLabel');
-    const tableHeader = document.getElementById('tableHeader');
-
-    clearRecordsWithoutConfirm();
-
-    if (mode === 'single') {
-        playerCountRow.style.display = 'flex';
-        goalBtnLabel.innerText = "ゴール点 (追加)";
-        tableHeader.innerHTML = `<th style="width:20%">着順</th><th>名前</th><th style="width:30%">タイム</th>`;
-    } else if (mode === 'single_lap') {
-        playerCountRow.style.display = 'none';
-        goalBtnLabel.innerText = "ラップ／ゴール点";
-        tableHeader.innerHTML = `<th>地点</th><th>項目名</th><th>区間ラップ</th><th>累積タイム</th>`;
-    } else {
-        playerCountRow.style.display = 'none';
-        goalBtnLabel.innerText = "ラップ／ゴール点";
-        tableHeader.innerHTML = `<th>走者</th><th>名前</th><th>区間ラップ</th><th>累積タイム</th>`;
-    }
-}
-
 function markStart() {
     startFrameTime = video.currentTime;
-    const mode = document.getElementById('measurementMode').value;
-    if (mode === 'single') {
-        document.getElementById('result').innerText = "スタートを確定しました。ゴールを計測してください。";
-    } else if (mode === 'single_lap') {
-        document.getElementById('result').innerText = "スプリントスタートを確定しました。各ラップポイントでボタンを押してください。";
-    } else {
-        document.getElementById('result').innerText = "リレースタートを確定しました。1走のラップ（バトンパス）点を設定してください。";
-    }
+    document.getElementById('result').innerText = "スタート確定。ゴールを計測してください。";
 }
 
 function markGoal() {
+    const max = parseInt(document.getElementById('playerCount').value);
     if (startFrameTime === null) return alert("先にスタート点を設定してください。");
+    if (records.length >= max) return alert("設定した人数分の計測が完了しています。");
 
-    const mode = document.getElementById('measurementMode').value;
+    const diff = Math.abs(video.currentTime - startFrameTime).toFixed(3);
+    const order = records.length + 1;
+    records.push({ order: order, name: `選手 ${order}`, time: diff });
 
-    if (mode === 'single') {
-        const max = parseInt(document.getElementById('playerCount').value);
-        if (records.length >= max) return alert("設定した人数分の計測が完了しています。");
-
-        const diff = Math.abs(video.currentTime - startFrameTime).toFixed(3);
-        const order = records.length + 1;
-        records.push({ order: order, name: `選手 ${order}`, time: diff });
-
-        renderSingleRow(order, diff);
-        document.getElementById('result').innerText = `${order}着の記録完了: ${diff} 秒`;
-    }
-    else if (mode === 'single_lap') {
-        const currentTotalTime = Math.abs(video.currentTime - startFrameTime);
-        let lapTime = 0;
-
-        if (records.length === 0) {
-            lapTime = currentTotalTime;
-        } else {
-            const prevTotalTime = parseFloat(records[records.length - 1].totalTime);
-            lapTime = currentTotalTime - prevTotalTime;
-        }
-
-        const pointNum = records.length + 1;
-        const recordItem = {
-            runner: `Point ${pointNum}`,
-            name: `ラップ地点 ${pointNum}`,
-            lapTime: lapTime.toFixed(3),
-            totalTime: currentTotalTime.toFixed(3)
-        };
-        records.push(recordItem);
-
-        renderRelayRow(recordItem);
-        document.getElementById('result').innerText = `ラップ ${pointNum}確定: ${recordItem.lapTime} 秒 (累積: ${recordItem.totalTime} 秒)`;
-    }
-    else {
-        if (records.length >= 4) return alert("4走すべての計測が完了しています。");
-
-        const currentTotalTime = Math.abs(video.currentTime - startFrameTime);
-        let lapTime = 0;
-
-        if (records.length === 0) {
-            lapTime = currentTotalTime;
-        } else {
-            const prevTotalTime = parseFloat(records[records.length - 1].totalTime);
-            lapTime = currentTotalTime - prevTotalTime;
-        }
-
-        const runnerNum = records.length + 1;
-        const recordItem = {
-            runner: `${runnerNum}走`,
-            name: `${runnerNum}走者`,
-            lapTime: lapTime.toFixed(3),
-            totalTime: currentTotalTime.toFixed(3)
-        };
-        records.push(recordItem);
-
-        renderRelayRow(recordItem);
-
-        if (runnerNum < 4) {
-            document.getElementById('result').innerText = `${runnerNum}走ラップ確定: ${recordItem.lapTime} 秒 (通算: ${recordItem.totalTime} 秒)`;
-        } else {
-            document.getElementById('result').innerText = `チームゴールです。総タイム: ${recordItem.totalTime} 秒`;
-        }
-    }
-}
-
-function renderSingleRow(order, diff) {
     const tbody = document.querySelector('#recordList tbody');
     const row = tbody.insertRow();
     row.insertCell(0).innerText = order + "着";
@@ -621,58 +481,29 @@ function renderSingleRow(order, diff) {
     edit.oninput = (e) => { records[order - 1].name = e.target.value; };
     nameCell.appendChild(edit);
     row.insertCell(2).innerText = diff + " 秒";
-}
 
-function renderRelayRow(item) {
-    const tbody = document.querySelector('#recordList tbody');
-    const row = tbody.insertRow();
-    row.insertCell(0).innerText = item.runner;
-
-    const nameCell = row.insertCell(1);
-    const edit = document.createElement("input");
-    edit.className = "name-edit";
-    edit.value = item.name;
-    const currentIndex = records.length - 1;
-    edit.oninput = (e) => { records[currentIndex].name = e.target.value; };
-    nameCell.appendChild(edit);
-
-    row.insertCell(2).innerText = item.lapTime + " 秒";
-    row.insertCell(3).innerText = item.totalTime + " 秒";
-}
-
-function clearRecordsWithoutConfirm() {
-    records = [];
-    document.querySelector('#recordList tbody').innerHTML = "";
-    document.getElementById('result').innerText = "スタート点を設定してください";
+    document.getElementById('result').innerText = `${order}着記録完了: ${diff} 秒`;
 }
 
 function clearRecords() {
-    if (!confirm("データを削除しますか？")) return;
-    clearRecordsWithoutConfirm();
+    if(!confirm("削除しますか？")) return;
+    records = []; document.querySelector('#recordList tbody').innerHTML = "";
+    document.getElementById('result').innerText = "クリアしました。";
 }
 
 function downloadCSV() {
-    if (records.length === 0) return alert("データがありません。");
-    const mode = document.getElementById('measurementMode').value;
-    let csv = "\uFEFF";
-
-    if (mode === 'single') {
-        csv += "着順,名前,タイム\n";
-        records.forEach(r => { csv += `${r.order},${r.name},${r.time}\n`; });
-    } else if (mode === 'single_lap') {
-        csv += "地点,項目名,区間ラップ(秒),累積タイム(秒)\n";
-        records.forEach(r => { csv += `${r.runner},${r.name},${r.lapTime},${r.totalTime}\n`; });
-    } else {
-        csv += "走者,名前,区間ラップ(秒),累積タイム(秒)\n";
-        records.forEach(r => { csv += `${r.runner},${r.name},${r.lapTime},${r.totalTime}\n`; });
-    }
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'keisoku.csv';
-    a.click();
+    if (records.length === 0) return alert("データがありません");
+    let csv = "\uFEFF着順,名前,タイム\n";
+    records.forEach(r => { csv += `${r.order},${r.name},${r.time}\n`; });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = "計測結果.csv"; a.click();
 }
+
+document.getElementById('startMode').onchange = (e) => {
+    document.getElementById('fixedRow').style.display = e.target.value === 'fixed' ? 'flex' : 'none';
+};
 </script>
+
 </body>
 </html>
